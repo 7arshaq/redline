@@ -1,40 +1,38 @@
-// Marks: every pinned moment and note across the library, grouped by audio. Tap to jump there.
+// Marks: every pinned moment and note, grouped by audio. Tap one to land there.
 import { state, on } from '../store.js';
 import * as player from '../player.js';
-import { animateList, setText } from '../anim.js';
+import { animateList, Roller } from '../anim.js';
 import { $, esc, fmtTime } from '../util.js';
-import { bar } from './kit.js';
 import { openPlayer } from './turntable.js';
 
 export function mount(root) {
   let mode = 'marks';
   root.innerHTML = `
-    <header class="pg-head" data-st><h1 class="pg-title">Marks</h1><span class="pg-sub" id="mkSub"></span></header>
-    <div class="tabs" id="mkTabs" data-st><button class="tab on" type="button" data-m="marks">Marks</button><button class="tab" type="button" data-m="notes">Notes</button></div>
-    <div class="rule" data-st></div>
+    <header class="pg-head" data-st><h1 class="pg-title">Marks<span class="num" id="mkCount">0</span></h1></header>
+    <div class="tabs" id="mkTabs" data-st><button class="tab on" type="button" data-m="marks">Moments</button><button class="tab" type="button" data-m="notes">Notes</button></div>
     <div class="scroll" data-st><div id="mkBody"></div><div class="empty" id="mkEmpty" hidden></div></div>`;
   const body = $('#mkBody', root);
+  const count = new Roller($('#mkCount', root));
 
   function render() {
     const groups = state.tracks
       .map((t) => ({ t, items: mode === 'marks' ? t.marks || [] : (t.notes || []).slice().sort((a, b) => (a.t ?? 1e12) - (b.t ?? 1e12)) }))
       .filter((g) => g.items.length)
       .sort((a, b) => (b.t.lastPlayedAt || b.t.addedAt) - (a.t.lastPlayedAt || a.t.addedAt));
-    const count = groups.reduce((n, g) => n + g.items.length, 0);
-    setText($('#mkSub', root), `${count} across ${groups.length}`);
+    const n = groups.reduce((s, g) => s + g.items.length, 0);
+    count.set(String(n));
     animateList(
       body,
       () =>
         (body.innerHTML = groups
           .map(
             ({ t, items }) => `<section class="grp" data-id="${t.id}">
-          <div class="grp-head"><span class="lbl">${esc(t.title)}</span><span class="lbl dim">${items.length}</span></div>
-          ${bar('dots', t.duration ? Math.max(...items.map((m) => m.t || 0)) / t.duration : 0)}
+          <div class="grp-title">${esc(t.title)}</div>
           ${items
             .map((m) =>
               mode === 'marks'
-                ? `<button class="mrow" type="button" data-t="${m.t}"><i class="mdot" style="--c:${esc(m.color || '#fff')}"></i><span class="mrow-name">${esc(m.name)}</span><span class="mrow-t">${fmtTime(m.t)}</span></button>`
-                : `<button class="mrow" type="button" ${m.t != null ? `data-t="${m.t}"` : ''}><i class="mdot" style="--c:#ff2d2d"></i><span class="mrow-note">${esc(m.text)}</span><span class="mrow-t">${m.t != null ? fmtTime(m.t) : '—'}</span></button>`,
+                ? `<button class="mrow" type="button" data-t="${m.t}"><span class="mrow-t">${fmtTime(m.t)}</span><span class="mrow-name">${esc(m.name)}</span></button>`
+                : `<button class="mrow" type="button" ${m.t != null ? `data-t="${m.t}"` : ''}><span class="mrow-t">${m.t != null ? fmtTime(m.t) : ''}</span><span class="mrow-note">${esc(m.text)}</span></button>`,
             )
             .join('')}
         </section>`,
@@ -43,8 +41,8 @@ export function mount(root) {
       { selector: '.grp' },
     );
     const empty = $('#mkEmpty', root);
-    empty.hidden = count > 0;
-    empty.innerHTML = mode === 'marks' ? '<b>No marks yet.</b>In the player, tap Mark to pin a moment. It lands here.' : '<b>No notes yet.</b>Write notes from the player. They can remember the moment too.';
+    empty.hidden = n > 0;
+    empty.innerHTML = mode === 'marks' ? '<b>No moments yet.</b>Tap the bookmark while listening to pin one.' : '<b>No notes yet.</b>Write them from the player.';
   }
 
   $('#mkTabs', root).addEventListener('click', (e) => {

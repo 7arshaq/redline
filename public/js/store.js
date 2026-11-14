@@ -25,7 +25,7 @@ const COLOUR_ORDER = [0, 7, 1, 10, 9, 3, 8, 2, 11, 4, 6, 5];
 export const nextColour = (n) => COLOUR_ORDER[n % COLOUR_ORDER.length];
 /** Soft fill for controls sitting on a swatch: darkens light tiles, lightens dark ones. */
 export const swatchSoft = (sw) => (/^#[ef]/i.test(sw.ink) ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.12)');
-export const MARK_COLORS = ['#ff2d2d', '#ffffff', '#8a8a8a'];
+export const MARK_COLORS = ['#ff4a2b', '#ffffff', '#8a8a8a'];
 
 export const DEFAULTS = {
   skipBack: 5,

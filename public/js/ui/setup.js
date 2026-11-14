@@ -22,7 +22,7 @@ const ROWS = [
   ['play', 'gauge', 'Playback'],
   ['via', 'server', 'Source'],
   ['dl', 'download', 'Quality'],
-  ['ios', 'phone', 'iPhone setup'],
+  ['ios', 'phone', 'iPhone downloader'],
   ['install', 'add-box', 'Install'],
   ['store', 'folder', 'Storage'],
   ['about', 'info', 'About'],
@@ -30,32 +30,24 @@ const ROWS = [
 
 export function mount(root) {
   root.innerHTML = `
-    <header class="pg-head" data-st><h1 class="pg-title">Setup</h1><span class="pg-sub">Saved instantly</span></header>
+    <header class="pg-head" data-st><h1 class="pg-title">Setup</h1></header>
     <div class="setup-list" id="suList">${ROWS.map(
-      ([k, ic, l]) => `<button class="srow" type="button" data-open="${k}" data-st>${icon(ic)}<span class="srow-txt"><span class="lbl">${l}</span><small id="su-${k}-s"></small></span><span class="srow-val" id="su-${k}"></span>${icon('chev-right', 'chev')}</button>`,
+      ([k, ic, l]) => `<button class="srow" type="button" data-open="${k}" data-st>${icon(ic)}<span class="srow-label">${l}</span><span class="srow-val" id="su-${k}"></span></button>`,
     ).join('')}</div>`;
   const q = (s) => $(s, root);
 
   async function renderRows() {
     const s = state.settings;
     setText(q('#su-skip'), s.skipBack === s.skipFwd ? `${s.skipBack}s` : `${s.skipBack}/${s.skipFwd}s`);
-    setText(q('#su-skip-s'), 'Back · forward · lock screen');
     setText(q('#su-play'), `${Math.round(s.speed * 100) / 100}×`);
-    setText(q('#su-play-s'), [s.sfx ? 'Sounds on' : 'Sounds off', s.autoplay ? 'autoplay' : 'one at a time'].join(' · '));
     const v = s.fetchVia || 'auto';
     setText(q('#su-via'), v === 'shortcut' ? 'Shortcut' : v === 'server' ? 'Server' : 'Auto');
-    setText(q('#su-via-s'), fetchMode() === 'shortcut' ? 'iPhone Shortcut downloads' : state.server.online ? 'Server connected' : 'Server not reachable');
     setText(q('#su-dl'), QUALITY[s.quality] || '128k');
-    setText(q('#su-dl-s'), s.autoFetch ? 'Fetches on paste' : 'Tap to fetch');
-    setText(q('#su-ios'), '5 steps');
-    setText(q('#su-ios-s'), 'a-Shell + Shortcut · no computer');
-    setText(q('#su-install'), device.standalone ? 'Done' : 'Add');
-    setText(q('#su-install-s'), device.standalone ? 'Running as an app' : 'Home Screen app');
+    setText(q('#su-ios'), '');
+    setText(q('#su-install'), device.standalone ? 'Installed' : '');
     const mine = [...state.blobs.values()].reduce((n, b) => n + (b?.size || 0), 0);
     setText(q('#su-store'), fmtBytes(mine));
-    setText(q('#su-store-s'), `${state.tracks.length} audio${state.tracks.length === 1 ? '' : 's'} on this device`);
-    setText(q('#su-about'), `B${BUILD}`);
-    setText(q('#su-about-s'), 'Report · keys');
+    setText(q('#su-about'), `v${BUILD}`);
   }
 
   q('#suList').addEventListener('click', (e) => {
@@ -115,7 +107,7 @@ const wireSeg = (body, id, fn) =>
 const SHEETS = {
   skip() {
     const s = state.settings;
-    const row = (k, l, v) => `<div class="big-read"><span class="lbl dim">${l}</span><span class="num"><span id="${k}V">${v}</span><small>s</small></span></div>
+    const row = (k, l, v) => `<div class="big-read"><span class="cap">${l}</span><span class="num"><span id="${k}V">${v}</span><small>s</small></span></div>
       <input class="range" type="range" min="3" max="30" step="1" value="${v}" data-r="${k}" aria-label="${l} seconds">`;
     sheet('Skip buttons', `${row('skipBack', 'Back', s.skipBack)}${row('skipFwd', 'Forward', s.skipFwd)}<div class="scale"><span>3s</span><span>10s</span><span>20s</span><span>30s</span></div>
       <p class="note">Used in the app, on the lock screen and with headphones.</p>`, (body) => {
@@ -273,7 +265,7 @@ const SHEETS = {
     const p = quota ? Math.min(1, Math.max(0.01, mine / quota)) : 0.01;
     sheet(
       'Storage',
-      `<div class="big-read"><span class="lbl dim">On this device</span><span class="num">${fmtBytes(mine).replace(/ (\w+)$/, '<small>$1</small>')}</span></div>
+      `<div class="big-read"><span class="cap">On this device</span><span class="num">${fmtBytes(mine).replace(/ (\w+)$/, '<small>$1</small>')}</span></div>
       <i class="bar ticks" style="--p:${p.toFixed(4)};height:22px;display:block;margin:10px 0"></i>
       <p class="note">${state.tracks.length} audios${quota ? ` · about ${fmtBytes(Math.max(0, quota - mine))} free for the app` : ''}${persisted ? ' · protected from cleanup' : ''}</p>
       <div class="prompt-actions" style="margin-top:16px">
@@ -305,7 +297,7 @@ const SHEETS = {
       'Redline',
       `<p class="prompt-msg">Paste a link, keep the audio, listen like a podcast. Library, marks and notes stay on this device, shared with Earmark on the same site.</p>
       ${device.os === 'desktop' ? '<p class="note">Keys: Space play · ← → skip · Shift → next · M mark · F favourite · P player</p>' : ''}
-      <div class="prompt-actions" style="margin-top:16px"><button class="btn ghost" type="button" id="suReport">Copy report</button><span class="lbl dim" style="align-self:center;text-align:right">Build ${BUILD}</span></div>`,
+      <div class="prompt-actions" style="margin-top:16px"><button class="btn ghost" type="button" id="suReport">Copy report</button><span class="mute" style="align-self:center;text-align:right">Build ${BUILD}</span></div>`,
       (body) =>
         body.querySelector('#suReport').addEventListener('click', async () => {
           const text = `Redline build ${BUILD} · ${navigator.userAgent}\n${player.report()}`;

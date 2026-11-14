@@ -1,49 +1,62 @@
-// Small shared pieces: the tick/dash/dot bars, list rows, and what happens after a link is added.
+// Small shared pieces: records, hairlines, list rows, and what happens after a link is added.
 import { state, progressOf, setInPlaylist, createPlaylist } from '../store.js';
 import * as player from '../player.js';
 import { retry } from '../downloads.js';
 import { pickFiles } from '../importer.js';
 import { icon } from '../icons.js';
-import { esc, fmtTime, clamp, relDay } from '../util.js';
+import { esc, fmtTime, fmtDur, clamp } from '../util.js';
 import { toast } from './toast.js';
 import { prompt } from './sheet.js';
 import { sfx } from '../fx.js';
 
-/** kind: ticks | dashes | dots */
-export const bar = (kind, p = 0, cls = '') => `<i class="bar ${kind} ${cls}" style="--p:${clamp(p || 0, 0, 1).toFixed(4)}" aria-hidden="true"></i>`;
-export const setBar = (el, p) => el && el.style.setProperty('--p', clamp(p || 0, 0, 1).toFixed(4));
+const P4 = (p) => clamp(p || 0, 0, 1).toFixed(4);
+/** A 1px progress line. */
+export const line = (p = 0, cls = '') => `<i class="line ${cls}" style="--p:${P4(p)}" aria-hidden="true"></i>`;
+export const setLine = (el, p) => el && el.style.setProperty('--p', P4(p));
 
 export const pp = () => `<span class="pp" data-on="0">${icon('play', 'pp-a')}${icon('pause', 'pp-b')}</span>`;
 
-/** A tiny record. `.spin` turns while the app is playing. */
-export const discMini = () => `
-  <svg class="disc-mini" viewBox="0 0 40 40" aria-hidden="true">
-    <circle cx="20" cy="20" r="19" fill="#0d0d0d" stroke="rgba(255,255,255,.3)"/>
-    <g class="spin"><circle cx="20" cy="20" r="14" fill="none" stroke="rgba(255,255,255,.14)"/><circle cx="20" cy="20" r="10.5" fill="none" stroke="rgba(255,255,255,.1)"/>
-    <circle cx="20" cy="20" r="6.5" fill="#ff2d2d"/><rect x="19.2" y="2.5" width="1.6" height="6" rx=".8" fill="#fff"/></g>
-    <circle cx="20" cy="20" r="1.6" fill="#000"/>
+/** A small record. `live` ones spin while audio plays; `p` draws how far you are as a red arc. */
+export function disc({ p = null, live = false } = {}) {
+  const arc = p == null ? '' : `<circle cx="50" cy="50" r="48.5" fill="none" stroke="var(--red)" stroke-width="1.5" pathLength="100" stroke-dasharray="${(clamp(p, 0, 1) * 100).toFixed(2)} 100" transform="rotate(-90 50 50)" class="disc-arc"/>`;
+  return `<svg class="disc-mini ${live ? 'live' : ''}" viewBox="0 0 100 100" aria-hidden="true">
+    <circle cx="50" cy="50" r="48.5" fill="#101010" stroke="rgba(242,239,233,.1)"/>
+    ${arc}
+    <g class="spin">
+      <circle cx="50" cy="50" r="41" fill="none" stroke="rgba(242,239,233,.06)"/><circle cx="50" cy="50" r="34" fill="none" stroke="rgba(242,239,233,.05)"/><circle cx="50" cy="50" r="27" fill="none" stroke="rgba(242,239,233,.06)"/>
+      <path d="M50 6 A44 44 0 0 1 88 28" fill="none" stroke="rgba(242,239,233,.16)" stroke-width="1.2" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="16" fill="var(--red)"/><rect x="49.2" y="37" width="1.6" height="6" rx=".8" fill="#fff" opacity=".9"/>
+    </g>
+    <circle cx="50" cy="50" r="2.4" fill="#080808"/>
   </svg>`;
+}
 
 export function timeLabel(t) {
-  if (!t.finished && t.position > 5 && t.duration) return `-${fmtTime(t.duration - t.position)}`;
-  return t.duration ? fmtTime(t.duration) : '—';
+  if (!t.finished && t.position > 5 && t.duration) return `${fmtDur(t.duration - t.position, true)} left`;
+  return t.duration ? fmtDur(t.duration, true) : '';
 }
 
 export function metaLine(t) {
-  const p = progressOf(t);
-  const bits = [t.finished ? 'Done' : p > 0.005 ? `${Math.round(p * 100)}%` : 'New', t.uploader, relDay(t.addedAt)];
-  return bits.filter(Boolean).join(' · ');
+  const bits = [t.finished ? 'Played' : timeLabel(t), t.uploader].filter(Boolean).map(esc);
+  return (t.favorite ? icon('star-fill', 'fav-ic') : '') + bits.join(' · ');
 }
 
-export const two = (n) => String(n).padStart(2, '0');
-
-export function rowHTML(t, i, cls = '') {
+export function rowHTML(t) {
   const cur = player.P.id === t.id;
-  return `<li class="row ${cls} ${cur ? 'is-current' : ''}" data-id="${t.id}" role="button" tabindex="0">
-    <span class="row-ix">${two(i + 1)}</span>
-    <span class="row-main"><span class="row-title">${esc(t.title)}</span><span class="row-meta">${esc(metaLine(t))}</span></span>
-    <span class="row-end">${t.favorite ? `<span class="row-fav">${icon('star-fill')}</span>` : ''}<span class="row-time">${timeLabel(t)}</span>
-    <button class="icon-btn sm row-more" type="button" aria-label="More">${icon('more')}</button></span>
+  const p = progressOf(t);
+  return `<li class="row ${cur ? 'is-current' : ''}" data-id="${t.id}" role="button" tabindex="0">
+    <span class="row-main"><span class="row-title">${esc(t.title)}</span><span class="row-meta">${metaLine(t)}</span></span>
+    <span class="row-end"><button class="icon-btn sm row-more" type="button" aria-label="More">${icon('more')}</button></span>
+    ${!t.finished && p > 0.005 ? line(p) : ''}
+  </li>`;
+}
+
+export function cellHTML(t) {
+  const cur = player.P.id === t.id;
+  return `<li class="cell ${cur ? 'is-current' : ''}" data-id="${t.id}" role="button" tabindex="0">
+    <span class="cell-disc">${disc({ p: progressOf(t), live: cur })}</span>
+    <span class="cell-title">${esc(t.title)}</span>
+    <span class="row-meta">${metaLine(t)}</span>
   </li>`;
 }
 

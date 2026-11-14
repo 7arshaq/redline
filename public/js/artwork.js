@@ -32,7 +32,7 @@ export function artworkFor(t) {
   const cy = 150;
   for (let i = 0; i < 72; i++) {
     const a = (i / 72) * Math.PI * 2 - Math.PI / 2;
-    g.strokeStyle = i < 46 ? '#ff2d2d' : '#2b2b2b';
+    g.strokeStyle = i < 46 ? '#ff4a2b' : '#2b2b2b';
     g.lineWidth = 4;
     g.beginPath();
     g.moveTo(cx + Math.cos(a) * 92, cy + Math.sin(a) * 92);
@@ -50,7 +50,7 @@ export function artworkFor(t) {
     g.arc(cx, cy, r, 0, Math.PI * 2);
     g.stroke();
   }
-  g.fillStyle = '#ff2d2d';
+  g.fillStyle = '#ff4a2b';
   g.beginPath();
   g.arc(cx, cy, 26, 0, Math.PI * 2);
   g.fill();
@@ -59,7 +59,7 @@ export function artworkFor(t) {
   g.arc(cx, cy, 5, 0, Math.PI * 2);
   g.fill();
 
-  g.fillStyle = '#ff2d2d';
+  g.fillStyle = '#ff4a2b';
   g.beginPath();
   g.arc(48, 60, 8, 0, Math.PI * 2);
   g.fill();

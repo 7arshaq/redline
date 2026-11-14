@@ -10,7 +10,7 @@ import { addLink } from './downloads.js';
 import { EASE, stagger, setText } from './anim.js';
 import { extractUrl, fmtTime, $, $$, motionOK } from './util.js';
 import { toast } from './ui/toast.js';
-import { handleResult, runImport, bar, setBar, pp, discMini } from './ui/kit.js';
+import { handleResult, runImport, line, setLine, pp, disc } from './ui/kit.js';
 import { mountPlayer, openPlayer } from './ui/turntable.js';
 import * as deck from './ui/deck.js';
 import * as library from './ui/library.js';
@@ -33,7 +33,7 @@ addEventListener('appinstalled', () => {
 /* ───────────── pages + dock ───────────── */
 
 const PAGES = [
-  { id: 'deck', label: 'Deck', ic: 'wave', mod: deck },
+  { id: 'deck', label: 'Home', ic: 'home', mod: deck },
   { id: 'library', label: 'Library', ic: 'stack', mod: library },
   { id: 'marks', label: 'Marks', ic: 'mark', mod: marks },
   { id: 'setup', label: 'Setup', ic: 'sliders', mod: setup },
@@ -41,26 +41,37 @@ const PAGES = [
 let cur = 0;
 const wideQ = matchMedia('(min-width: 900px) and (min-height: 560px)');
 
-function placeIndicator() {
+/** The red dot under the active tab. It stretches toward where it's going, then gathers up,
+ *  like a drop of liquid sliding across. */
+function placeIndicator(from = null) {
   const ind = $('.dock-ind');
   const btn = $$('.dock-btn')[cur];
   if (!ind || !btn) return;
-  ind.style.transform = wideQ.matches ? `translateY(${btn.offsetTop}px)` : `translateX(${cur * 100}%)`;
+  const vertical = wideQ.matches;
+  const pos = (i) => (vertical ? `translateY(${$$('.dock-btn')[i].offsetTop}px)` : `translateX(${i * 100}%)`);
+  ind.style.transform = pos(cur);
+  const dot = ind.firstElementChild;
+  if (from == null || from === cur || !motionOK()) return;
+  const w = Math.abs(cur - from);
+  const stretch = vertical ? `scaleY(${1 + 7 * w})` : `scaleX(${1 + 9 * w})`;
+  ind.animate([{ transform: pos(from) }, { transform: pos(cur) }], { duration: 520, easing: 'cubic-bezier(0.65, 0, 0.2, 1)' });
+  dot.animate([{ transform: 'none' }, { transform: stretch, offset: 0.45 }, { transform: 'none' }], { duration: 520, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' });
 }
 
 function mountDock() {
   const dock = $('#dock');
   dock.innerHTML =
-    PAGES.map((p, i) => `<button class="dock-btn ${i === 0 ? 'on' : ''}" type="button" data-page="${p.id}" aria-label="${p.label}">${icon(p.ic)}<span>${p.label}</span></button>`).join('') +
-    '<i class="dock-ind" aria-hidden="true"></i>';
+    PAGES.map((p, i) => `<button class="dock-btn ${i === 0 ? 'on' : ''}" type="button" data-page="${p.id}" aria-label="${p.label}">${icon(p.ic)}</button>`).join('') +
+    '<span class="dock-ind" aria-hidden="true"><i></i></span>';
   dock.addEventListener('click', (e) => {
     const b = e.target.closest('[data-page]');
     if (b) show(b.dataset.page);
   });
-  addEventListener('resize', placeIndicator);
+  addEventListener('resize', () => placeIndicator());
   placeIndicator();
 }
 
+/** Tabs are peers: they cross-fade in place, never slide. */
 function show(id, opts) {
   const i = PAGES.findIndex((p) => p.id === id);
   if (i < 0) return;
@@ -71,18 +82,18 @@ function show(id, opts) {
   }
   const from = PAGES[cur].el;
   const to = page.el;
-  const dir = i > cur ? 1 : -1;
+  const was = cur;
   cur = i;
   [from, to].forEach((el) => el.getAnimations().forEach((a) => a.cancel()));
   to.hidden = false;
   page.api?.enter?.(opts);
   $$('.dock-btn').forEach((b, k) => b.classList.toggle('on', k === i));
-  placeIndicator();
+  placeIndicator(was);
   if (!motionOK()) {
     from.hidden = true;
     return;
   }
-  const out = from.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${-dir * 26}px)` }], { duration: 170, easing: 'ease-out', fill: 'forwards' });
+  const out = from.animate([{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(4px)' }], { duration: 160, easing: 'ease-out', fill: 'forwards' });
   out.finished.then(
     () => {
       from.hidden = true;
@@ -90,8 +101,7 @@ function show(id, opts) {
     },
     () => {},
   );
-  to.animate([{ opacity: 0, transform: `translateX(${dir * 26}px)` }, { opacity: 1, transform: 'none' }], { duration: 400, easing: EASE.out });
-  stagger($$('[data-st]', to), { y: 12, step: 36, duration: 460, delay: 60 });
+  to.animate([{ opacity: 0, filter: 'blur(4px)', transform: 'scale(0.99)' }, { opacity: 1, filter: 'blur(0)', transform: 'none' }], { duration: 380, delay: 60, easing: EASE.out, fill: 'backwards' });
 }
 
 /* ───────────── strip (mini player) ───────────── */
@@ -99,26 +109,27 @@ function show(id, opts) {
 function mountStrip() {
   const strip = $('#strip');
   strip.innerHTML = `
-    <span class="strip-disc">${discMini()}</span>
+    ${line(0, 'live')}
+    <button class="strip-disc" type="button" data-a="open" data-sfx="none" aria-label="Open player">${disc({ live: true })}</button>
     <button class="strip-main" type="button" data-a="open" data-sfx="none" aria-label="Open player">
       <span class="strip-title" id="stripTitle"></span>
-      <span class="strip-row">${bar('ticks', 0, 'thin live')}<span class="strip-time" id="stripTime"></span></span>
+      <span class="strip-time" id="stripTime"></span>
     </button>
     <span class="strip-ctl">
-      <button class="badge" type="button" data-a="toggle" aria-label="Play or pause">${pp()}</button>
-      <button class="icon-btn" type="button" data-a="next" data-sfx="skip" aria-label="Next audio">${icon('next')}</button>
+      <button class="icon-btn" type="button" data-a="toggle" data-sfx="press" aria-label="Play or pause">${pp()}</button>
+      <button class="icon-btn dim" type="button" data-a="next" data-sfx="skip" data-fx="nudge-r" aria-label="Next audio">${icon('next')}</button>
     </span>`;
   const title = $('#stripTitle');
   const time = $('#stripTime');
-  const fill = $('.bar', strip);
+  const fill = $('.line', strip);
   const ppEl = $('.pp', strip);
   const root = document.documentElement;
 
   const renderTime = () => {
     const d = player.duration();
     const t = player.time();
-    setBar(fill, d ? t / d : 0);
-    time.textContent = d ? `-${fmtTime(Math.max(0, d - t))}` : '';
+    setLine(fill, d ? t / d : 0);
+    time.textContent = d ? `${fmtTime(t)} / ${fmtTime(d)}` : '';
   };
   const renderTrack = () => {
     const t = player.current();
@@ -138,7 +149,7 @@ function mountStrip() {
     else if (a === 'toggle') player.toggle();
     else if (a === 'next') player.next();
   });
-  // A flick up opens the player, like lifting the lid.
+  // A flick up opens the player.
   let y0 = null;
   strip.addEventListener('touchstart', (e) => (y0 = e.touches[0].clientY), { passive: true });
   strip.addEventListener('touchend', (e) => {
@@ -153,17 +164,7 @@ function mountStrip() {
   renderState();
 }
 
-/* ───────────── status, server ───────────── */
-
-function renderStat() {
-  const el = $('#topStat');
-  const mode = fetchMode();
-  const ok = mode === 'shortcut' || Boolean(state.server.online);
-  el.dataset.ok = ok ? '1' : '0';
-  const label = mode === 'shortcut' ? 'Shortcut' : state.server.online ? 'Server' : 'Offline';
-  if (!el.firstChild) el.innerHTML = '<i></i><span></span>';
-  setText(el.lastChild, label);
-}
+/* ───────────── server ───────────── */
 
 // On plain static hosting there is no /api: stop asking after the first 404.
 let noServerHere = false;
@@ -266,12 +267,9 @@ async function boot() {
   mountStrip();
   mountPlayer();
   player.restore();
-  renderStat();
-  on('server', renderStat);
-  on('settings', renderStat);
   on('go', (d) => d?.page && show(d.page, d));
   document.documentElement.classList.add('ready');
-  stagger($$('[data-st]', PAGES[0].el), { y: 14, step: 50, duration: 560, delay: 40 });
+  stagger($$('[data-st]', PAGES[0].el), { y: 18, step: 70, duration: 720, delay: 80 });
 
   // iOS often reloads the app while you're in Shortcuts: pick the hand-off back up.
   await restorePending();

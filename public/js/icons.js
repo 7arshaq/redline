@@ -1,15 +1,17 @@
 // Geometric stroke icons, 24px grid, drawn to sit with the bento tiles.
 const F = 'fill="currentColor" stroke="none"';
 const P = {
-  play: `<path ${F} d="M7.2 4.3v15.4c0 .75.82 1.2 1.45.8l12.2-7.7a.95.95 0 0 0 0-1.6L8.65 3.5c-.63-.4-1.45.05-1.45.8z"/>`,
-  pause: `<rect ${F} x="5.4" y="4" width="4.8" height="16" rx="1.3"/><rect ${F} x="13.8" y="4" width="4.8" height="16" rx="1.3"/>`,
-  next: `<path ${F} d="M4.5 5.3v13.4c0 .7.77 1.13 1.37.75l10.5-6.7a.9.9 0 0 0 0-1.5L5.87 4.55c-.6-.38-1.37.05-1.37.75z"/><rect ${F} x="17.2" y="4.6" width="3" height="14.8" rx="1.1"/>`,
-  prev: `<path ${F} d="M19.5 5.3v13.4c0 .7-.77 1.13-1.37.75L7.63 12.75a.9.9 0 0 1 0-1.5l10.5-6.7c.6-.38 1.37.05 1.37.75z"/><rect ${F} x="3.8" y="4.6" width="3" height="14.8" rx="1.1"/>`,
+  disc: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.2"/>',
+  home: '<path d="M4.5 10.5L12 4.5l7.5 6V19a.5.5 0 0 1-.5.5h-4.5v-5h-5v5H5a.5.5 0 0 1-.5-.5z"/>',
+  play: `<path ${F} d="M8 5.2v13.6c0 .6.66.96 1.16.64l10.3-6.8a.76.76 0 0 0 0-1.28L9.16 4.56C8.66 4.24 8 4.6 8 5.2z"/>`,
+  pause: `<rect ${F} x="6.6" y="4.5" width="2.6" height="15" rx="1.3"/><rect ${F} x="14.8" y="4.5" width="2.6" height="15" rx="1.3"/>`,
+  next: `<path d="M5.5 6.2v11.6c0 .5.55.8.97.53l8.9-5.8a.63.63 0 0 0 0-1.06l-8.9-5.8c-.42-.27-.97.03-.97.53z"/><path d="M18.5 5.5v13"/>`,
+  prev: `<path d="M18.5 6.2v11.6c0 .5-.55.8-.97.53l-8.9-5.8a.63.63 0 0 1 0-1.06l8.9-5.8c.42-.27.97.03.97.53z"/><path d="M5.5 5.5v13"/>`,
   back: '<path d="M3.6 12.3A8.4 8.4 0 1 0 6.2 6"/><path d="M3.4 3.2v4.6H8"/>',
   fwd: '<path d="M20.4 12.3A8.4 8.4 0 1 1 17.8 6"/><path d="M20.6 3.2v4.6H16"/>',
   'chev-down': '<path d="M5.5 9l6.5 6.5L18.5 9"/>',
   'chev-right': '<path d="M9 5.5l6.5 6.5L9 18.5"/>',
-  more: `<circle ${F} cx="5" cy="12" r="1.9"/><circle ${F} cx="12" cy="12" r="1.9"/><circle ${F} cx="19" cy="12" r="1.9"/>`,
+  more: `<circle ${F} cx="5.5" cy="12" r="1.3"/><circle ${F} cx="12" cy="12" r="1.3"/><circle ${F} cx="18.5" cy="12" r="1.3"/>`,
   star: '<path d="M12 3.2l2.6 5.5 6 .8-4.4 4.1 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"/>',
   'star-fill': `<path ${F} d="M12 2.4l2.95 6.03 6.65.92-4.85 4.6 1.2 6.6L12 17.3l-5.95 3.25 1.2-6.6L2.4 9.35l6.65-.92z"/>`,
   share: '<path d="M12 14.5V3.5"/><path d="M7.5 7.8L12 3.3l4.5 4.5"/><path d="M5 11.5v7.3c0 .95.75 1.7 1.7 1.7h10.6c.95 0 1.7-.75 1.7-1.7v-7.3"/>',
@@ -60,7 +62,7 @@ export function sprite() {
   const symbols = Object.entries(P)
     .map(
       ([k, v]) =>
-        `<symbol id="i-${k}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${v}</symbol>`,
+        `<symbol id="i-${k}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${v}</symbol>`,
     )
     .join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">${symbols}</svg>`;

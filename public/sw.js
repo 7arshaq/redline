@@ -1,6 +1,6 @@
 // Offline shell. Network-first (fresh when online, instant fallback when not).
 // Audio never goes through here — it lives in IndexedDB.
-const VERSION = 'redline-v1'; // keep in step with BUILD in js/util.js
+const VERSION = 'redline-v2'; // keep in step with BUILD in js/util.js
 // Paths are relative so the app works at the site root or in a sub-folder (e.g. GitHub Pages).
 const ROOT = new URL('./', self.location).href;
 const SHELL = [
@@ -9,6 +9,7 @@ const SHELL = [
   'js/artwork.js', 'js/player.js', 'js/shorten.js', 'js/importer.js', 'js/mp4.js', 'js/repair.js', 'js/fx.js', 'js/media.js',
   'js/ui/kit.js', 'js/ui/deck.js', 'js/ui/turntable.js', 'js/ui/library.js', 'js/ui/marks.js', 'js/ui/setup.js',
   'js/ui/sheet.js', 'js/ui/toast.js', 'js/ui/track-actions.js',
+  'fonts/geist.woff2', 'fonts/serif.woff2', 'fonts/serif-italic.woff2',
 ];
 
 self.addEventListener('install', (e) => {
