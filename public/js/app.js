@@ -8,7 +8,7 @@ import { repairLibrary, repairTrack, tidyTitles } from './repair.js';
 import { initFx, sfx } from './fx.js';
 import { addLink } from './downloads.js';
 import { EASE, stagger, setText } from './anim.js';
-import { extractUrl, fmtTime, $, $$, motionOK } from './util.js';
+import { extractUrl, fmtTime, $, $$, motionOK, BUILD } from './util.js';
 import { toast } from './ui/toast.js';
 import { handleResult, runImport, line, setLine, pp, disc } from './ui/kit.js';
 import { mountPlayer, openPlayer } from './ui/turntable.js';
@@ -245,6 +245,33 @@ function keyboard() {
   });
 }
 
+/* An installed iPhone app usually resumes the old page from memory instead of reloading,
+   so it would keep showing an old version. Look for a newer build whenever the app comes
+   back, and swap to it with a quiet fade — never in the middle of listening. */
+let updating = false;
+async function checkUpdate() {
+  if (updating || !navigator.onLine) return;
+  try {
+    const txt = await (await fetch(`js/util.js?build=${Date.now()}`, { cache: 'no-store' })).text();
+    const live = Number(txt.match(/BUILD = (\d+)/)?.[1]);
+    if (!live || live <= BUILD) return;
+    updating = true;
+    navigator.serviceWorker?.getRegistration().then((r) => r?.update()).catch(() => {});
+    const go = () => {
+      document.documentElement.classList.add('updating');
+      setTimeout(() => location.reload(), 320);
+    };
+    if (!player.isPlaying()) go();
+    else {
+      const off = on('player:state', () => {
+        if (player.isPlaying()) return;
+        off();
+        go();
+      });
+    }
+  } catch {}
+}
+
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   const secure = location.protocol === 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
@@ -289,6 +316,8 @@ async function boot() {
   handleIncoming();
   keyboard();
   registerSW();
+  setTimeout(checkUpdate, 4000);
+  document.addEventListener('visibilitychange', () => !document.hidden && checkUpdate());
 
   tidyTitles().catch(() => {});
   repairLibrary(state.session.lastId)

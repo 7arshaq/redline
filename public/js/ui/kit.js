@@ -18,14 +18,14 @@ export const pp = () => `<span class="pp" data-on="0">${icon('play', 'pp-a')}${i
 
 /** A small record. `live` ones spin while audio plays; `p` draws how far you are as a red arc. */
 export function disc({ p = null, live = false } = {}) {
-  const arc = p == null ? '' : `<circle cx="50" cy="50" r="48.5" fill="none" stroke="var(--red)" stroke-width="1.5" pathLength="100" stroke-dasharray="${(clamp(p, 0, 1) * 100).toFixed(2)} 100" transform="rotate(-90 50 50)" class="disc-arc"/>`;
+  const arc = p == null ? '' : `<circle cx="50" cy="50" r="48.5" fill="none" style="stroke:var(--red)" stroke-width="1.5" pathLength="100" stroke-dasharray="${(clamp(p, 0, 1) * 100).toFixed(2)} 100" transform="rotate(-90 50 50)" class="disc-arc"/>`;
   return `<svg class="disc-mini ${live ? 'live' : ''}" viewBox="0 0 100 100" aria-hidden="true">
     <circle cx="50" cy="50" r="48.5" fill="#101010" stroke="rgba(242,239,233,.1)"/>
     ${arc}
     <g class="spin">
       <circle cx="50" cy="50" r="41" fill="none" stroke="rgba(242,239,233,.06)"/><circle cx="50" cy="50" r="34" fill="none" stroke="rgba(242,239,233,.05)"/><circle cx="50" cy="50" r="27" fill="none" stroke="rgba(242,239,233,.06)"/>
       <path d="M50 6 A44 44 0 0 1 88 28" fill="none" stroke="rgba(242,239,233,.16)" stroke-width="1.2" stroke-linecap="round"/>
-      <circle cx="50" cy="50" r="16" fill="var(--red)"/><rect x="49.2" y="37" width="1.6" height="6" rx=".8" fill="#fff" opacity=".9"/>
+      <circle cx="50" cy="50" r="16" style="fill:var(--red)"/><rect x="49.2" y="37" width="1.6" height="6" rx=".8" fill="#fff" opacity=".9"/>
     </g>
     <circle cx="50" cy="50" r="2.4" fill="#080808"/>
   </svg>`;

@@ -16,7 +16,7 @@ function icon({ size = 512, bleed = false, square = false }) {
     const a = (i / 60) * Math.PI * 2 - Math.PI / 2;
     const lit = i < 40;
     const r0 = R - 22 * k;
-    return `<line x1="${(c + Math.cos(a) * r0).toFixed(1)}" y1="${(c + Math.sin(a) * r0).toFixed(1)}" x2="${(c + Math.cos(a) * R).toFixed(1)}" y2="${(c + Math.sin(a) * R).toFixed(1)}" stroke="${lit ? '#ff2a37' : '#2e2e2e'}" stroke-width="${7 * k}" stroke-linecap="round"/>`;
+    return `<line x1="${(c + Math.cos(a) * r0).toFixed(1)}" y1="${(c + Math.sin(a) * r0).toFixed(1)}" x2="${(c + Math.cos(a) * R).toFixed(1)}" y2="${(c + Math.sin(a) * R).toFixed(1)}" stroke="${lit ? '#f0193a' : '#2e2e2e'}" stroke-width="${7 * k}" stroke-linecap="round"/>`;
   }).join('');
   const d = 148 * k;
   const grooves = [0.92, 0.82, 0.72, 0.62].map((f) => `<circle cx="${c}" cy="${c}" r="${(d * f).toFixed(1)}" fill="none" stroke="#fff" stroke-opacity=".1" stroke-width="3"/>`).join('');
@@ -25,7 +25,7 @@ function icon({ size = 512, bleed = false, square = false }) {
     ${ticks}
     <circle cx="${c}" cy="${c}" r="${d}" fill="#111" stroke="#fff" stroke-opacity=".22" stroke-width="2"/>
     ${grooves}
-    <circle cx="${c}" cy="${c}" r="${d * 0.36}" fill="#ff2a37"/>
+    <circle cx="${c}" cy="${c}" r="${d * 0.36}" fill="#f0193a"/>
     <circle cx="${c}" cy="${c}" r="${9 * k}" fill="#000"/>
     <g transform="translate(${c} ${c}) scale(${k}) translate(-256 -256)">
       <circle cx="370" cy="148" r="20" fill="#fff"/>

@@ -15,8 +15,10 @@
   --faint: rgba(242, 239, 233, 0.3);
   --ghost: rgba(242, 239, 233, 0.14);
   --hair: rgba(242, 239, 233, 0.09);
-  --red: #ff2a37;
-  --red-soft: rgba(255, 42, 55, 0.16);
+  --red: #f0193a;
+  --red-glow: rgba(240, 25, 58, 0.24);
+  --red-glow-2: rgba(240, 25, 58, 0.08);
+  --red-beam: rgba(255, 110, 125, 0.9);
   --pad: 22px;
   --sat: env(safe-area-inset-top, 0px);
   --sar: env(safe-area-inset-right, 0px);
@@ -38,6 +40,9 @@
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   font-feature-settings: 'ss01', 'cv11';
+}
+@supports (color: color(display-p3 1 0 0)) {
+  :root { --red: color(display-p3 0.9 0.07 0.2); --red-glow: color(display-p3 0.9 0.07 0.2 / 0.24); --red-glow-2: color(display-p3 0.9 0.07 0.2 / 0.08); --red-beam: color(display-p3 1 0.45 0.5 / 0.9); }
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -142,7 +147,7 @@ svg.ic { width: 22px; height: 22px; flex: none; display: block; }
 .intake:focus-within .intake-rule { background: var(--faint); }
 .intake-rule i { position: absolute; inset: 0; background: var(--red); transform-origin: left; transform: scaleX(var(--p, 0)); transition: transform 700ms var(--ease-out); }
 /* the travelling light while something downloads (a border beam along one edge) */
-.intake-rule b { position: absolute; top: -1px; bottom: -1px; left: 0; width: 38%; background: linear-gradient(90deg, transparent, rgba(255, 120, 128, 0.9) 45%, #fff 50%, rgba(255, 120, 128, 0.9) 55%, transparent); opacity: 0; transform: translateX(-100%); }
+.intake-rule b { position: absolute; top: -1px; bottom: -1px; left: 0; width: 38%; background: linear-gradient(90deg, transparent, var(--red-beam) 45%, #fff 50%, var(--red-beam) 55%, transparent); opacity: 0; transform: translateX(-100%); }
 .intake.busy .intake-rule b { opacity: 1; animation: beam 1.8s var(--ease-in-out) infinite; }
 @keyframes beam { from { transform: translateX(-100%); } to { transform: translateX(270%); } }
 .intake-msg { grid-column: 1 / -1; height: 20px; font-size: 13px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
@@ -215,7 +220,7 @@ svg.ic { width: 22px; height: 22px; flex: none; display: block; }
 .player.open { visibility: visible; transition: none; }
 .player-bg { position: absolute; inset: 0; background: var(--bg); opacity: 0; transition: opacity 320ms var(--ease-out); }
 .player.open .player-bg { opacity: 1; transition: opacity 460ms var(--ease-out); }
-.player-bg::after { content: ''; position: absolute; left: 50%; top: 38%; width: 130vmin; height: 130vmin; margin: -65vmin 0 0 -65vmin; border-radius: 50%; background: radial-gradient(circle, rgba(255, 42, 55, 0.22), rgba(255, 42, 55, 0.07) 36%, transparent 64%); opacity: 0; transform: scale(0.7); transition: opacity 1600ms var(--ease-out), transform 2000ms var(--ease-out); pointer-events: none; }
+.player-bg::after { content: ''; position: absolute; left: 50%; top: 38%; width: 130vmin; height: 130vmin; margin: -65vmin 0 0 -65vmin; border-radius: 50%; background: radial-gradient(circle, var(--red-glow), var(--red-glow-2) 36%, transparent 64%); opacity: 0; transform: scale(0.7); transition: opacity 1600ms var(--ease-out), transform 2000ms var(--ease-out); pointer-events: none; }
 .player.playing .player-bg::after { opacity: 1; transform: scale(1); animation: breathe 6s var(--ease-in-out) 2s infinite; }
 @keyframes breathe { 50% { transform: scale(1.07); opacity: 0.72; } }
 .tt { position: absolute; inset: var(--edge-t) var(--edge-r) max(14px, var(--edge-b)) var(--edge-l); display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto auto; }
@@ -427,3 +432,4 @@ textarea.field { height: auto; padding: 10px 0; line-height: 1.45; resize: none;
 }
 .row-meta .fav-ic, .cell .fav-ic { display: inline-block; width: 11px; height: 11px; margin: 0 5px -1px 0; color: var(--red); }
 .srow:last-child { border-bottom: 0; }
+.updating .app, .updating .player { opacity: 0; filter: blur(6px); transition: opacity 300ms var(--ease-out), filter 300ms var(--ease-out); }
