@@ -52,7 +52,7 @@ const discSVG = () => `
       ${grooves}
       <path d="M200 86 A114 114 0 0 1 300 140 L200 200 Z" fill="url(#ttSheen)"/>
       <path d="M200 314 A114 114 0 0 1 100 260 L200 200 Z" fill="url(#ttSheen)"/>
-      <circle cx="200" cy="200" r="40" fill="#ff4a2b"/>
+      <circle cx="200" cy="200" r="40" fill="#ff2a37"/>
       <circle cx="200" cy="200" r="31" fill="none" stroke="rgba(0,0,0,.18)" stroke-width="0.8"/>
       <rect x="199.2" y="167" width="1.6" height="9" rx="0.8" fill="#fff" opacity=".85"/>
     </g>
@@ -433,7 +433,7 @@ function renderMarks() {
   R.marks.innerHTML = t.marks
     .map((m) => {
       const a = (m.t / d) * Math.PI * 2;
-      return `<circle cx="${(200 + 197 * Math.sin(a)).toFixed(1)}" cy="${(200 - 197 * Math.cos(a)).toFixed(1)}" r="2.6" fill="#ff4a2b"/>`;
+      return `<circle cx="${(200 + 197 * Math.sin(a)).toFixed(1)}" cy="${(200 - 197 * Math.cos(a)).toFixed(1)}" r="2.6" fill="#ff2a37"/>`;
     })
     .join('');
 }

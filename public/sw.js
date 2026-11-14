@@ -1,6 +1,6 @@
 // Offline shell. Network-first (fresh when online, instant fallback when not).
 // Audio never goes through here — it lives in IndexedDB.
-const VERSION = 'redline-v2'; // keep in step with BUILD in js/util.js
+const VERSION = 'redline-v3'; // keep in step with BUILD in js/util.js
 // Paths are relative so the app works at the site root or in a sub-folder (e.g. GitHub Pages).
 const ROOT = new URL('./', self.location).href;
 const SHELL = [
