@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <title>Redline</title>
+    <meta name="description" content="Paste a link. Keep the audio. Listen like a podcast." />
+    <meta name="theme-color" content="#000000" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Redline" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="css/app.css" />
+    <script type="module" src="js/app.js"></script>
+  </head>
+  <body>
+    <div class="app" id="app">
+      <header class="top">
+        <span class="brand"><i></i>REDLINE</span>
+        <span class="top-stat" id="topStat"></span>
+      </header>
+      <main class="stage" id="stage">
+        <section class="page" id="pg-deck" data-page="deck"></section>
+        <section class="page" id="pg-library" data-page="library" hidden></section>
+        <section class="page" id="pg-marks" data-page="marks" hidden></section>
+        <section class="page" id="pg-setup" data-page="setup" hidden></section>
+      </main>
+      <div class="strip-wrap" id="stripWrap"><div class="strip-clip"><div class="strip" id="strip"></div></div></div>
+      <nav class="dock" id="dock" aria-label="Sections"></nav>
+    </div>
+    <div class="player" id="player" role="dialog" aria-label="Player" aria-hidden="true" inert></div>
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+    <audio id="audio" preload="auto" playsinline></audio>
+    <noscript><p style="color:#eee;padding:24px;font-family:sans-serif">Redline needs JavaScript.</p></noscript>
+  </body>
+</html>
