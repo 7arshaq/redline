@@ -13,7 +13,7 @@ import { openSheet, menu, prompt } from './sheet.js';
 import { trackMenu, toggleFavorite, shareTrack } from './track-actions.js';
 import { pp } from './kit.js';
 
-const ARM_REST = -12;
+const ARM_REST = -4;
 const ARM_IN = 6.7;
 const ARM_SWEEP = 24.1;
 const PLATTER = 118 / 200; // platter radius as a share of the svg's half-width
