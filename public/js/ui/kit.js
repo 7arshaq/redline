@@ -37,7 +37,8 @@ export function timeLabel(t) {
 }
 
 export function metaLine(t) {
-  const bits = [t.finished ? 'Played' : timeLabel(t), t.uploader].filter(Boolean).map(esc);
+  const going = !t.finished && t.position > 5 && t.duration;
+  const bits = [t.finished ? 'Played' : going ? `<span class="hot">${esc(timeLabel(t))}</span>` : esc(timeLabel(t)), t.uploader && esc(t.uploader)].filter(Boolean);
   return (t.favorite ? icon('star-fill', 'fav-ic') : '') + bits.join(' · ');
 }
 

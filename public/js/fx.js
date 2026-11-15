@@ -23,13 +23,21 @@ function context() {
       return null;
     }
     bus = ctx.createGain();
-    bus.gain.value = 0.55;
+    // Loud enough for a phone speaker at normal volume; a limiter keeps peaks clean.
+    bus.gain.value = 1.7;
+    const limit = ctx.createDynamicsCompressor();
+    limit.threshold.value = -12;
+    limit.knee.value = 8;
+    limit.ratio.value = 6;
+    limit.attack.value = 0.002;
+    limit.release.value = 0.12;
     // Round everything off: nothing above ~3 kHz gets through, so no click is ever sharp.
     const soften = ctx.createBiquadFilter();
     soften.type = 'lowpass';
     soften.frequency.value = 5200;
     bus.connect(soften);
-    soften.connect(ctx.destination);
+    soften.connect(limit);
+    limit.connect(ctx.destination);
     hiss = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * 0.05), ctx.sampleRate);
     const d = hiss.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -55,6 +63,20 @@ function thump(c, at, { from, to = from, dur = 0.06, gain = 0.25, type = 'sine' 
   g.connect(bus);
   o.start(at);
   o.stop(at + dur + 0.02);
+  if (from < 520) {
+    const o2 = c.createOscillator();
+    const g2 = c.createGain();
+    o2.type = 'sine';
+    o2.frequency.setValueAtTime(from * 3, at);
+    if (to !== from) o2.frequency.exponentialRampToValueAtTime(Math.max(90, to * 3), at + dur);
+    g2.gain.setValueAtTime(0.0001, at);
+    g2.gain.exponentialRampToValueAtTime(gain * 0.45, at + 0.003);
+    g2.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.8);
+    o2.connect(g2);
+    g2.connect(bus);
+    o2.start(at);
+    o2.stop(at + dur + 0.02);
+  }
 }
 
 /** A few milliseconds of filtered noise: the "click" on top. */

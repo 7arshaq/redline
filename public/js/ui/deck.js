@@ -15,7 +15,18 @@ export function mount(root) {
   <div class="home">
     <form class="intake" id="dkForm" autocomplete="off" novalidate data-st>
       <input id="dkInput" class="link-input" type="url" inputmode="url" placeholder="Paste a link" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Video link">
-      <button class="round go" type="submit" id="dkGo" aria-label="Get the audio">${icon('download')}</button>
+      <button class="fetch" type="submit" id="dkGo" data-state="idle" data-sfx="press" aria-label="Get the audio">
+        <svg class="fetch-ring" viewBox="0 0 60 60" aria-hidden="true">
+          <circle class="fr-track" cx="30" cy="30" r="28.5" pathLength="100"/>
+          <circle class="fr-fill" cx="30" cy="30" r="28.5" pathLength="100" stroke-dasharray="0 100"/>
+          <circle class="fr-comet" cx="30" cy="30" r="28.5" pathLength="100" stroke-dasharray="14 86"/>
+        </svg>
+        <span class="fetch-core">
+          <span class="fetch-ic">${icon('download', 'f-down')}${icon('check', 'f-done')}</span>
+          <span class="fetch-label">Fetch</span>
+          <span class="fetch-pct" id="dkPct"></span>
+        </span>
+      </button>
       <div class="intake-rule"><i></i><b></b></div>
       <div class="intake-msg" id="dkMsg"></div>
     </form>
@@ -38,8 +49,12 @@ export function mount(root) {
   const msg = q('#dkMsg');
   const fill = q('.intake-rule i');
   const list = q('#dkList');
+  const go = q('#dkGo');
+  const ring = q('.fr-fill');
+  const pct = q('#dkPct');
   let nowId = null;
   let discFor = '';
+  let justSaved = 0;
 
   /* ── intake ── */
   const inputUrl = () => extractUrl(input.value);
@@ -49,14 +64,19 @@ export function mount(root) {
     const url = inputUrl();
     form.classList.toggle('busy', Boolean(job));
     form.classList.toggle('valid', Boolean(url) && !job);
+    // The button tells the story: idle → ready (a link is in) → busy (a ring fills) → done.
+    go.dataset.state = job ? 'busy' : Date.now() - justSaved < 1700 ? 'done' : url ? 'ready' : 'idle';
     if (job) {
       const p = overall(job);
+      ring.setAttribute('stroke-dasharray', `${(Math.max(0.02, p) * 100).toFixed(1)} 100`);
+      pct.textContent = String(Math.round(p * 100));
       fill.style.setProperty('--p', p.toFixed(3));
       msg.dataset.s = '';
       setText(msg, `${STAGE_LABEL[job.stage] || 'Working'} · ${Math.round(p * 100)}%`);
       return;
     }
     fill.style.setProperty('--p', '0');
+    ring.setAttribute('stroke-dasharray', '0 100');
     const src = url ? sourceOf(url) : null;
     msg.dataset.s = input.value && !url ? 'error' : '';
     setText(msg, src ? src.name : input.value ? 'Not a link' : waiting ? 'Waiting on Shortcuts' : '');
@@ -156,6 +176,12 @@ export function mount(root) {
   on('tracks', all);
   on('fav', renderList);
   on('jobs', renderIntake);
+  on('tracks', (d) => {
+    if (!d?.added) return;
+    justSaved = Date.now();
+    renderIntake();
+    setTimeout(renderIntake, 1750);
+  });
   on('player:load', all);
   on('player:time', renderNowTime);
   all();
