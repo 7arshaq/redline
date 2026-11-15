@@ -199,10 +199,7 @@ svg.ic { width: 22px; height: 22px; flex: none; display: block; }
 /* the field's own invitation */
 .link-wrap { position: relative; display: block; min-width: 0; }
 .link-ph { position: absolute; left: -2px; top: 50%; display: flex; align-items: center; transform: translateY(-50%); pointer-events: none; font-size: clamp(28px, 8vw, 38px); font-weight: 200; letter-spacing: -0.035em; white-space: nowrap; color: transparent; background: linear-gradient(100deg, var(--faint) 0 40%, rgba(242, 239, 233, 0.78) 50%, var(--faint) 60% 100%) 100% 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; animation: sheen-text 7s ease-in-out infinite; transition: opacity 200ms, transform 300ms var(--ease-out), filter 200ms; }
-.link-ph i { display: inline-block; width: 2px; height: 0.82em; margin-left: 8px; border-radius: 1px; background: var(--red); box-shadow: 0 0 10px var(--red-glow); animation: caret 1.15s ease-in-out infinite; }
-@keyframes caret { 0%, 45% { opacity: 1; } 55%, 100% { opacity: 0; } }
 @keyframes sheen-text { 0%, 55% { background-position: 100% 0; } 85%, 100% { background-position: 0 0; } }
-.link-input:focus + .link-ph i { opacity: 0; animation: none; }
 .link-input:not(:placeholder-shown) + .link-ph { opacity: 0; transform: translateY(-50%) translateX(8px); filter: blur(4px); }
 @keyframes drop { 0% { transform: translateY(-6px); opacity: 0; } 35%, 65% { opacity: 1; } 100% { transform: translateY(6px); opacity: 0; } }
 

@@ -16,7 +16,7 @@ export function mount(root) {
     <form class="intake" id="dkForm" autocomplete="off" novalidate data-st>
       <span class="link-wrap">
         <input id="dkInput" class="link-input" type="url" inputmode="url" placeholder=" " autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Paste a video link">
-        <span class="link-ph" aria-hidden="true">Drop a link<i></i></span>
+        <span class="link-ph" aria-hidden="true">Drop a link</span>
       </span>
       <button class="fetch" type="submit" id="dkGo" data-state="idle" data-sfx="press" aria-label="Get the audio">
         <svg class="fetch-svg" viewBox="0 0 32 32" aria-hidden="true">
