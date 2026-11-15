@@ -10,7 +10,7 @@ import { addLink } from './downloads.js';
 import { EASE, stagger, setText } from './anim.js';
 import { extractUrl, fmtTime, $, $$, motionOK, BUILD } from './util.js';
 import { toast } from './ui/toast.js';
-import { handleResult, runImport, line, setLine, pp, disc } from './ui/kit.js';
+import { handleResult, runImport, line, setLine, pp, disc, holdToScrub } from './ui/kit.js';
 import { mountPlayer, openPlayer } from './ui/turntable.js';
 import * as deck from './ui/deck.js';
 import * as library from './ui/library.js';
@@ -111,31 +111,86 @@ function mountStrip() {
   strip.innerHTML = `
     ${line(0, 'live')}
     <button class="strip-disc" type="button" data-a="open" data-sfx="none" aria-label="Open player">${disc({ live: true })}</button>
-    <button class="strip-main" type="button" data-a="open" data-sfx="none" aria-label="Open player">
-      <span class="strip-title" id="stripTitle"></span>
-      <span class="strip-time" id="stripTime"></span>
-    </button>
+    <button class="strip-title" type="button" data-a="open" data-sfx="none" aria-label="Open player"><span class="strip-title-in" id="stripTitle"></span></button>
+    <span class="strip-time" id="stripTime"></span>
     <span class="strip-ctl">
+      <button class="icon-btn skip" type="button" data-a="back" data-fx="spin-l" data-sfx="none" aria-label="Skip back">${icon('back')}<b class="n" id="stripBackN"></b></button>
       <button class="icon-btn" type="button" data-a="toggle" data-sfx="press" aria-label="Play or pause">${pp()}</button>
-      <button class="icon-btn dim" type="button" data-a="next" data-sfx="skip" data-fx="nudge-r" aria-label="Next audio">${icon('next')}</button>
+      <button class="icon-btn" type="button" data-a="next" data-sfx="skip" data-fx="nudge-r" aria-label="Next audio">${icon('next')}</button>
     </span>`;
   const title = $('#stripTitle');
+  const box = $('.strip-title', strip);
   const time = $('#stripTime');
   const fill = $('.line', strip);
   const ppEl = $('.pp', strip);
   const root = document.documentElement;
+  holdToScrub($('[data-a="back"]', strip), -1);
+  holdToScrub($('[data-a="next"]', strip), 1);
 
+  /* The name on one line: shrink it to fit (down to a floor), and only a name too long even
+     then glides slowly across and back. */
+  let glide = null;
+  const MAX = 13;
+  const MIN = 9;
+  function fit() {
+    glide?.cancel();
+    glide = null;
+    box.classList.remove('gliding');
+    title.style.fontSize = `${MAX}px`;
+    title.style.letterSpacing = '';
+    const room = box.clientWidth;
+    if (!room) return;
+    let w = title.scrollWidth;
+    if (w > room) {
+      title.style.fontSize = `${Math.max(MIN, Math.floor((MAX * room * 10) / w) / 10)}px`;
+      w = title.scrollWidth;
+      // the last few pixels: tighten the spacing a touch before giving up and gliding
+      if (w > room && w - room < room * 0.05) {
+        title.style.letterSpacing = "-0.02em";
+        w = title.scrollWidth;
+      }
+    }
+    const over = w - room;
+    if (over > 1 && motionOK()) {
+      box.classList.add('gliding');
+      const ms = Math.max(5000, over * 70);
+      glide = title.animate(
+        [
+          { transform: 'translateX(0)', offset: 0 },
+          { transform: 'translateX(0)', offset: 0.2 },
+          { transform: `translateX(${-over - 14}px)`, offset: 0.5 },
+          { transform: `translateX(${-over - 14}px)`, offset: 0.7 },
+          { transform: 'translateX(0)', offset: 1 },
+        ],
+        { duration: ms * 2, iterations: Infinity, easing: 'cubic-bezier(0.45, 0, 0.55, 1)' },
+      );
+    }
+  }
   const renderTime = () => {
     const d = player.duration();
     const t = player.time();
     setLine(fill, d ? t / d : 0);
     time.textContent = d ? `${fmtTime(t)} / ${fmtTime(d)}` : '';
   };
+  let shownId = null;
   const renderTrack = () => {
     const t = player.current();
     $('#stripWrap').classList.toggle('show', Boolean(t));
     root.classList.toggle('has-strip', Boolean(t));
-    if (t) setText(title, t.title);
+    if (t && (t.id !== shownId || title.textContent !== t.title)) {
+      const first = !shownId;
+      shownId = t.id;
+      const put = () => {
+        title.textContent = t.title;
+        requestAnimationFrame(fit);
+      };
+      if (first || !motionOK()) put();
+      else
+        title.animate([{ opacity: 1 }, { opacity: 0, filter: 'blur(3px)' }], { duration: 140, easing: 'ease-out' }).finished.then(() => {
+          put();
+          title.animate([{ opacity: 0, filter: 'blur(3px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: 260, easing: 'ease-out' });
+        }, put);
+    }
     renderTime();
   };
   const renderState = () => {
@@ -143,23 +198,29 @@ function mountStrip() {
     ppEl.dataset.on = on ? '1' : '0';
     root.classList.toggle('playing', on);
   };
+  const renderSkip = () => ($('#stripBackN').textContent = state.settings.skipBack);
   strip.addEventListener('click', (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'open') openPlayer();
     else if (a === 'toggle') player.toggle();
+    else if (a === 'back') player.skip(-1);
     else if (a === 'next') player.next();
   });
   // A flick up opens the player.
   let y0 = null;
   strip.addEventListener('touchstart', (e) => (y0 = e.touches[0].clientY), { passive: true });
   strip.addEventListener('touchend', (e) => {
-    if (y0 !== null && y0 - e.changedTouches[0].clientY > 28) openPlayer();
+    if (y0 !== null && y0 - e.changedTouches[0].clientY > 28 && !e.target.closest('.strip-ctl')) openPlayer();
     y0 = null;
   });
   on('player:load', renderTrack);
   on('player:state', renderState);
   on('player:time', renderTime);
   on('tracks', renderTrack);
+  on('settings', renderSkip);
+  addEventListener('resize', () => requestAnimationFrame(fit));
+  document.fonts?.ready.then(() => requestAnimationFrame(fit));
+  renderSkip();
   renderTrack();
   renderState();
 }
@@ -327,8 +388,8 @@ async function boot() {
     const fixed = await repairTrack(id, { force: true });
     if (!fixed) toast('Couldn’t jump in this audio. Close the app fully and open it again.', { icon: 'info', duration: 6000 });
   });
-  on('player:sleep-done', () => toast('Sleep timer: paused. Good night.', { icon: 'moon', duration: 5000 }));
-  on('player:end-of-queue', () => toast("That's the end. Nothing queued after this.", { icon: 'queue', duration: 2400 }));
+  on('player:sleep-done', () => toast('Paused for the night', { icon: 'moon', duration: 5000 }));
+  on('player:end-of-queue', () => toast('Nothing up next', { icon: 'queue', duration: 2200 }));
   on('player:blocked', () => toast('Tap play to start', { icon: 'play', duration: 2400 }));
   on('player:error', (d) => toast(d?.message || 'Playback error', { icon: 'info' }));
   void sfx;

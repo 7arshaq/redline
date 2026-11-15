@@ -14,18 +14,19 @@ export function mount(root) {
   root.innerHTML = `
   <div class="home">
     <form class="intake" id="dkForm" autocomplete="off" novalidate data-st>
-      <input id="dkInput" class="link-input" type="url" inputmode="url" placeholder="Paste a link" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Video link">
+      <span class="link-wrap">
+        <input id="dkInput" class="link-input" type="url" inputmode="url" placeholder=" " autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Paste a video link">
+        <span class="link-ph" aria-hidden="true">Drop a link<i></i></span>
+      </span>
       <button class="fetch" type="submit" id="dkGo" data-state="idle" data-sfx="press" aria-label="Get the audio">
-        <svg class="fetch-ring" viewBox="0 0 60 60" aria-hidden="true">
-          <circle class="fr-track" cx="30" cy="30" r="28.5" pathLength="100"/>
-          <circle class="fr-fill" cx="30" cy="30" r="28.5" pathLength="100" stroke-dasharray="0 100"/>
-          <circle class="fr-comet" cx="30" cy="30" r="28.5" pathLength="100" stroke-dasharray="14 86"/>
+        <svg class="fetch-svg" viewBox="0 0 32 32" aria-hidden="true">
+          <defs><clipPath id="faClip"><rect x="0" y="0" width="32" height="24.6"/></clipPath></defs>
+          <g clip-path="url(#faClip)"><g class="fa-arrow"><path d="M16 4.5v15.5"/><path d="M9.8 14.2 16 20.4l6.2-6.2"/></g></g>
+          <path class="fa-tray" d="M8 27.4h16"/>
+          <path class="fa-fill" d="M8 27.4h16" pathLength="100" stroke-dasharray="0 100"/>
+          <path class="fa-check" d="M9.5 15.6l4.6 4.6 8.6-9.2" pathLength="1"/>
         </svg>
-        <span class="fetch-core">
-          <span class="fetch-ic">${icon('download', 'f-down')}${icon('check', 'f-done')}</span>
-          <span class="fetch-label">Fetch</span>
-          <span class="fetch-pct" id="dkPct"></span>
-        </span>
+        <span class="fetch-label">Fetch</span>
       </button>
       <div class="intake-rule"><i></i><b></b></div>
       <div class="intake-msg" id="dkMsg"></div>
@@ -40,7 +41,7 @@ export function mount(root) {
     </button>
 
     <div class="sub-h" data-st><span>Recent</span><button class="text-btn" type="button" id="dkImport">Import file</button></div>
-    <div class="scroll" data-st><ul class="list" id="dkList"></ul><div class="empty" id="dkEmpty" hidden><b>Nothing here yet.</b>Paste a YouTube or X link above, or import an audio file.</div></div>
+    <div class="scroll" data-st><ul class="list" id="dkList"></ul><div class="empty" id="dkEmpty" hidden><b>Nothing here yet.</b>Drop a YouTube or X link above, or import an audio file.</div></div>
   </div>`;
 
   const q = (s) => $(s, root);
@@ -50,8 +51,7 @@ export function mount(root) {
   const fill = q('.intake-rule i');
   const list = q('#dkList');
   const go = q('#dkGo');
-  const ring = q('.fr-fill');
-  const pct = q('#dkPct');
+  const tray = q('.fa-fill');
   let nowId = null;
   let discFor = '';
   let justSaved = 0;
@@ -64,19 +64,18 @@ export function mount(root) {
     const url = inputUrl();
     form.classList.toggle('busy', Boolean(job));
     form.classList.toggle('valid', Boolean(url) && !job);
-    // The button tells the story: idle → ready (a link is in) → busy (a ring fills) → done.
+    // The arrow tells the story: idle → ready (a link is in) → busy (it keeps falling, the tray fills) → done.
     go.dataset.state = job ? 'busy' : Date.now() - justSaved < 1700 ? 'done' : url ? 'ready' : 'idle';
     if (job) {
       const p = overall(job);
-      ring.setAttribute('stroke-dasharray', `${(Math.max(0.02, p) * 100).toFixed(1)} 100`);
-      pct.textContent = String(Math.round(p * 100));
+      tray.setAttribute('stroke-dasharray', `${(Math.max(0.03, p) * 100).toFixed(1)} 100`);
       fill.style.setProperty('--p', p.toFixed(3));
       msg.dataset.s = '';
       setText(msg, `${STAGE_LABEL[job.stage] || 'Working'} · ${Math.round(p * 100)}%`);
       return;
     }
     fill.style.setProperty('--p', '0');
-    ring.setAttribute('stroke-dasharray', '0 100');
+    tray.setAttribute('stroke-dasharray', '0 100');
     const src = url ? sourceOf(url) : null;
     msg.dataset.s = input.value && !url ? 'error' : '';
     setText(msg, src ? src.name : input.value ? 'Not a link' : waiting ? 'Waiting on Shortcuts' : '');

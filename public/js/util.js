@@ -1,5 +1,5 @@
 /** Shown in Settings → About, so it's easy to tell which build a phone is running. Matches sw.js. */
-export const BUILD = 6;
+export const BUILD = 7;
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];

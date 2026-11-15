@@ -51,7 +51,7 @@ export async function toggleFavorite(t, btn) {
   await updateTrack(t.id, { favorite: !t.favorite });
   if (btn) pop(btn, 1.3);
   emit('fav', { id: t.id });
-  toast(t.favorite ? 'Added to favourites' : 'Removed from favourites', { icon: t.favorite ? 'star-fill' : 'star', duration: 1800 });
+  toast(t.favorite ? 'Added to favourites' : 'Removed from favourites', { icon: t.favorite ? 'star-fill' : 'star', duration: 1800, key: 'fav' });
 }
 
 export async function renameTrack(t) {

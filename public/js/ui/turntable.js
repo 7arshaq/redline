@@ -11,7 +11,7 @@ import { sfx } from '../fx.js';
 import { toast } from './toast.js';
 import { openSheet, menu, prompt } from './sheet.js';
 import { trackMenu, toggleFavorite, shareTrack } from './track-actions.js';
-import { pp } from './kit.js';
+import { pp, holdToScrub } from './kit.js';
 
 const ARM_REST = -4;
 const ARM_IN = 6.7;
@@ -28,6 +28,9 @@ let spinRate = 0;
 let spinRaf = 0;
 let seeking = null;
 let panel = null;
+let scrubDir = 0;
+let armHeld = false;
+let armPreview = null;
 
 const grooves = [110, 102, 95, 88, 80, 72, 64, 56].map((r, i) => `<circle cx="200" cy="200" r="${r}" fill="none" stroke="rgba(242,239,233,${i % 2 ? 0.045 : 0.07})"/>`).join('');
 
@@ -102,7 +105,6 @@ export function mountPlayer() {
       <button class="act" type="button" data-a="sleep" data-fx="tilt" aria-label="Sleep timer">${icon('moon')}<b id="rdSleep"></b></button>
       <button class="act" type="button" data-a="mark" data-fx="stamp" data-sfx="none" aria-label="Mark this moment">${icon('mark-plus')}<b id="rdMark"></b></button>
       <button class="act" type="button" data-a="notes" aria-label="Notes">${icon('note')}<b id="rdNotes"></b></button>
-      <button class="act" type="button" data-a="share" data-fx="lift" aria-label="Share">${icon('share')}</button>
     </div>
   </div>`;
 
@@ -151,6 +153,21 @@ export function mountPlayer() {
   });
 
   wireRing();
+  wireArm();
+  holdToScrub($('[data-a="prev"]', sheet), -1);
+  holdToScrub($('[data-a="next"]', sheet), 1);
+  holdToScrub($('[data-a="back"]', sheet), -1);
+  holdToScrub($('[data-a="fwd"]', sheet), 1);
+  on('player:scrub', ({ dir }) => {
+    scrubDir = dir;
+    const a = ensureSpin();
+    cancelAnimationFrame(spinRaf);
+    if (dir && isOpen && motionOK()) {
+      a.play();
+      a.playbackRate = dir * 7; // the record whirs forward or back while you hold
+    } else syncSpin(true);
+    renderTime();
+  });
 
   const app = $('#app');
   const centreDist = (pt) => {
@@ -160,7 +177,7 @@ export function mountPlayer() {
   dragDismiss(sheet, {
     mouseHandle: $('.tt-head', sheet),
     canStart: (e) => {
-      if (!isOpen || e.target.closest('input, textarea')) return false;
+      if (!isOpen || e.target.closest('input, textarea, .tt-arm')) return false;
       if (e.target.closest('.tt-svg')) return centreDist(e.touches?.[0] || e) < 150;
       return true;
     },
@@ -168,7 +185,6 @@ export function mountPlayer() {
     onProgress: (p, live) => {
       app.style.transition = live ? 'none' : '';
       app.style.opacity = live ? String(p * 0.9) : '';
-      app.style.filter = live ? `blur(${(1 - p) * 6}px)` : '';
       app.style.transform = live ? `scale(${0.94 + 0.06 * p})` : '';
     },
   });
@@ -232,13 +248,26 @@ function platterOver(rect) {
 
 const visible = (el) => el && el.offsetParent !== null && el.getBoundingClientRect().width > 0;
 
+// The small record the big one came from. It hides while the big one is out, so there is
+// only ever one record on screen.
+let source = null;
+const hideSource = (el) => {
+  if (source && source !== el) source.style.visibility = '';
+  source = el || null;
+  if (source) source.style.visibility = 'hidden';
+};
+let flight = 0;
+const stopFlight = () => sheet.getAnimations({ subtree: true }).forEach((a) => a.id === 'fly' && a.cancel());
+
 export function openPlayer(fromEl) {
   if (isOpen || !player.P.id) return;
   const from = [fromEl, $('.strip-disc')].find(visible);
-  const fromRect = from ? from.getBoundingClientRect() : null;
+  const fromRect = from && motionOK() ? from.getBoundingClientRect() : null;
   isOpen = true;
-  sheet.getAnimations({ subtree: true }).forEach((a) => a.id === 'fly' && a.cancel());
+  flight += 1;
+  stopFlight();
   sheet.style.transform = '';
+  sheet.style.visibility = '';
   renderTrack();
   renderTime();
   sheet.classList.add('open');
@@ -248,54 +277,54 @@ export function openPlayer(fromEl) {
   sfx('open');
   closeFn = pushLayer(closePlayer, 'player');
   renderState();
-
   if (!motionOK()) return;
-  const ins = sheet.querySelectorAll('[data-in]');
-  ins.forEach((el, i) =>
-    el.animate([{ opacity: 0, transform: 'translateY(18px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }], {
-      duration: 620,
-      delay: 140 + i * 45,
-      easing: EASE.out,
-      fill: 'backwards',
-    }),
-  );
+  if (fromRect) hideSource(from);
+  sheet.querySelectorAll('[data-in]').forEach((el, i) => {
+    const an = el.animate([{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 560, delay: 160 + i * 40, easing: EASE.out, fill: 'backwards' });
+    an.id = 'fly';
+  });
   if (fromRect) {
-    const a = R.svg.animate([{ transform: platterOver(fromRect) }, { transform: 'none' }], { duration: 680, easing: 'cubic-bezier(0.2, 0.9, 0.1, 1)' });
-    a.id = 'fly';
-    for (const el of [R.ring, R.armWrap]) {
-      el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 520, delay: 260, easing: 'ease-out', fill: 'backwards' }).id = 'fly';
-    }
+    R.svg.animate([{ transform: platterOver(fromRect) }, { transform: 'none' }], { duration: 640, easing: 'cubic-bezier(0.2, 0.85, 0.1, 1)' }).id = 'fly';
+    for (const el of [R.ring, R.armWrap]) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 460, delay: 300, easing: 'ease-out', fill: 'backwards' }).id = 'fly';
   } else {
-    R.svg.animate([{ opacity: 0, transform: 'scale(0.9)' }, { opacity: 1, transform: 'none' }], { duration: 560, easing: EASE.out }).id = 'fly';
+    R.svg.animate([{ opacity: 0, transform: 'scale(0.92)' }, { opacity: 1, transform: 'none' }], { duration: 520, easing: EASE.out }).id = 'fly';
   }
 }
 
 function closePlayer() {
   isOpen = false;
   closeFn = null;
+  const mine = ++flight;
   sfx('close');
   const to = $('.strip-disc');
   const toRect = visible(to) && motionOK() ? restingRect(to) : null;
+  // the record lands on the mini player's disc: that one stays hidden until it does
+  if (toRect) hideSource(to);
+  else hideSource(null);
   document.documentElement.classList.remove('player-open');
   sheet.classList.remove('open');
   sheet.setAttribute('aria-hidden', 'true');
   sheet.inert = true;
-  if (motionOK()) {
-    sheet.querySelectorAll('[data-in]').forEach((el) => el.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(10px)' }], { duration: 180, easing: 'ease-out', fill: 'forwards' }).id = 'fly');
-    if (toRect) {
-      for (const el of [R.ring, R.armWrap]) el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }).id = 'fly';
-      const a = R.svg.animate([{ transform: 'none' }, { transform: platterOver(toRect) }], { duration: 440, easing: 'cubic-bezier(0.3, 0.7, 0.1, 1)', fill: 'forwards' });
-      a.id = 'fly';
-    } else {
-      R.svg.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(0.92)' }], { duration: 220, fill: 'forwards' }).id = 'fly';
-    }
-  }
-  setTimeout(() => {
-    if (isOpen) return;
-    sheet.style.transform = '';
-    sheet.getAnimations({ subtree: true }).forEach((a) => a.id === 'fly' && a.cancel());
-    syncSpin(true);
-  }, 470);
+  const done = () => {
+    if (mine !== flight || isOpen) return;
+    sheet.style.visibility = 'hidden'; // hide the flown record and the reveal the mini one in the same frame
+    hideSource(null);
+    requestAnimationFrame(() => {
+      if (mine !== flight || isOpen) return;
+      stopFlight();
+      sheet.style.transform = '';
+      syncSpin(true);
+    });
+  };
+  if (!motionOK()) return done();
+  sheet.querySelectorAll('[data-in]').forEach((el) => (el.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(8px)' }], { duration: 150, easing: 'ease-out', fill: 'forwards' }).id = 'fly'));
+  for (const el of [R.ring, R.armWrap]) el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'forwards' }).id = 'fly';
+  const from = getComputedStyle(R.svg).transform;
+  const fly = toRect
+    ? R.svg.animate([{ transform: from === 'none' ? 'none' : from }, { transform: platterOver(toRect) }], { duration: 420, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' })
+    : R.svg.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(0.92)' }], { duration: 220, fill: 'forwards' });
+  fly.id = 'fly';
+  fly.finished.then(done, done);
 }
 
 /* ───────────── the record ───────────── */
@@ -336,6 +365,102 @@ function syncSpin(instant = false) {
     }
   };
   spinRaf = requestAnimationFrame(step);
+}
+
+/* Pick the tone-arm up. A tap plays or pauses. Drop it on the record and the audio jumps to
+   where the needle landed (further in = later); drop it off the record and it stops, and the
+   arm swings back to its rest. */
+function wireArm() {
+  const arm = R.arm;
+  arm.insertAdjacentHTML('afterbegin', '<line class="tt-arm-grip" x1="318" y1="78" x2="318" y2="252" stroke="transparent" stroke-width="28" stroke-linecap="round"/>');
+  const L = 150; // pivot to needle
+  const pivot = () => {
+    const r = R.svg.getBoundingClientRect();
+    const k = r.width / 400;
+    return { x: r.left + 318 * k, y: r.top + 96 * k };
+  };
+  const angleAt = (e) => {
+    const p = pivot();
+    return (Math.atan2(-(e.clientX - p.x), e.clientY - p.y) * 180) / Math.PI;
+  };
+  const onRecord = (deg) => {
+    const a = (deg * Math.PI) / 180;
+    const r = Math.hypot(318 - L * Math.sin(a) - 200, 96 + L * Math.cos(a) - 200);
+    return r > 46 && r < 124;
+  };
+  const progressAt = (deg) => clamp((deg - ARM_IN) / ARM_SWEEP, 0, 1);
+  const restingDeg = () => {
+    const d = player.duration();
+    const p = d ? clamp(player.time() / d, 0, 1) : 0;
+    return player.isPlaying() ? ARM_IN + p * ARM_SWEEP : ARM_REST;
+  };
+  let g = null;
+  arm.addEventListener('pointerdown', (e) => {
+    if (e.button || !player.P.id) return;
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      arm.setPointerCapture(e.pointerId);
+    } catch {}
+    const start = restingDeg();
+    g = { id: e.pointerId, x: e.clientX, y: e.clientY, off: angleAt(e) - start, deg: start, moved: false, lastOn: null };
+  });
+  arm.addEventListener('pointermove', (e) => {
+    if (!g || g.id !== e.pointerId) return;
+    if (!g.moved && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 6) return;
+    if (!g.moved) {
+      g.moved = true;
+      armHeld = true;
+      arm.classList.add('held');
+      haptic(8);
+      sfx('tick');
+    }
+    let deg = angleAt(e) - g.off;
+    // soft stops: it can swing well past either side, but resists more the further it goes
+    const lo = -26;
+    const hi = 44;
+    if (deg < lo) deg = lo - Math.sqrt(lo - deg) * 2;
+    if (deg > hi) deg = hi + Math.sqrt(deg - hi) * 2;
+    g.deg = deg;
+    arm.style.transform = `rotate(${deg.toFixed(2)}deg)`;
+    const on = onRecord(deg);
+    if (on !== g.lastOn) {
+      g.lastOn = on;
+      R.svg.classList.toggle('arm-over', on);
+      if (g.lastOn !== null) sfx('tick');
+    }
+    armPreview = on ? progressAt(deg) : null;
+    renderTime();
+  });
+  const end = (e) => {
+    if (!g || g.id !== e.pointerId) return;
+    const was = g;
+    g = null;
+    armHeld = false;
+    armPreview = null;
+    arm.classList.remove('held');
+    R.svg.classList.remove('arm-over');
+    if (!was.moved) {
+      if (e.type === 'pointerup') {
+        player.toggle();
+        sfx('press');
+      }
+      return renderTime();
+    }
+    if (e.type === 'pointerup' && onRecord(was.deg)) {
+      const d = player.duration();
+      if (d) player.seek(progressAt(was.deg) * d);
+      if (!player.isPlaying()) player.play();
+      sfx('press');
+      haptic(10);
+    } else if (e.type === 'pointerup') {
+      if (player.isPlaying()) player.pause();
+      sfx('off');
+    }
+    renderTime();
+  };
+  arm.addEventListener('pointerup', end);
+  arm.addEventListener('pointercancel', end);
 }
 
 function wireRing() {
@@ -457,14 +582,14 @@ let marksFor = '';
 function renderTime() {
   if (!player.P.id) return;
   const d = player.duration();
-  const t = seeking ? seeking.p * d : player.time();
+  const t = seeking ? seeking.p * d : armPreview != null ? armPreview * d : player.time();
   const p = d ? clamp(t / d, 0, 1) : 0;
   const deg = (p * 360).toFixed(2);
   R.arc.setAttribute('stroke-dasharray', `${deg} 360`);
   R.knob.style.transform = `rotate(${deg}deg)`;
   R.svg.setAttribute('aria-valuenow', String(Math.round(p * 100)));
-  const down = player.isPlaying() || seeking;
-  R.arm.style.transform = `rotate(${(down ? ARM_IN + p * ARM_SWEEP : ARM_REST).toFixed(2)}deg)`;
+  const down = player.isPlaying() || seeking || scrubDir;
+  if (!armHeld) R.arm.style.transform = `rotate(${(down ? ARM_IN + p * ARM_SWEEP : ARM_REST).toFixed(2)}deg)`;
   R.cur.textContent = fmtTime(t, d >= 3600);
   const left = Math.max(0, d - t);
   R.left.textContent = d ? `-${fmtTime(left)}` : '';

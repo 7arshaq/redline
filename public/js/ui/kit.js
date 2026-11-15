@@ -1,10 +1,10 @@
 // Small shared pieces: records, hairlines, list rows, and what happens after a link is added.
-import { state, progressOf, setInPlaylist, createPlaylist } from '../store.js';
+import { state, emit, progressOf, setInPlaylist, createPlaylist } from '../store.js';
 import * as player from '../player.js';
 import { retry } from '../downloads.js';
 import { pickFiles } from '../importer.js';
 import { icon } from '../icons.js';
-import { esc, fmtTime, fmtDur, clamp } from '../util.js';
+import { esc, fmtTime, fmtDur, clamp, haptic } from '../util.js';
 import { toast } from './toast.js';
 import { prompt } from './sheet.js';
 import { sfx } from '../fx.js';
@@ -151,4 +151,65 @@ export function wireRows(list, ids, label) {
     }
     player.playFrom(t.id, ids(), typeof label === 'function' ? label() : label);
   });
+}
+
+/**
+ * Tap: the button's own job (next, previous, skip). Hold: fast-forward (dir 1) or rewind
+ * (dir -1) through the audio until you let go, faster the longer you hold. No labels —
+ * the ring, the time and the whirring record show it.
+ */
+export function holdToScrub(btn, dir) {
+  if (!btn) return;
+  let wait = null;
+  let tick = null;
+  let held = false;
+  let t0 = 0;
+  const step = () => {
+    const s = (performance.now() - t0) / 1000;
+    const jump = s < 1.2 ? 3 : s < 3 ? 7 : 15;
+    const d = player.duration();
+    let t = player.time() + dir * jump;
+    t = d ? clamp(t, 0, Math.max(0, d - 1)) : Math.max(0, t);
+    player.seek(t);
+    sfx('tick');
+  };
+  const stop = () => {
+    clearTimeout(wait);
+    clearInterval(tick);
+    wait = tick = null;
+    if (held) {
+      document.documentElement.classList.remove('scrubbing');
+      btn.classList.remove('holding');
+      emit('player:scrub', { dir: 0 });
+    }
+  };
+  btn.addEventListener('pointerdown', (e) => {
+    if (e.button || !player.P.id) return;
+    held = false;
+    clearTimeout(wait);
+    wait = setTimeout(() => {
+      held = true;
+      t0 = performance.now();
+      haptic(12);
+      btn.classList.add('holding');
+      document.documentElement.classList.add('scrubbing');
+      emit('player:scrub', { dir });
+      step();
+      tick = setInterval(step, 180);
+    }, 320);
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) btn.addEventListener(ev, stop);
+  btn.addEventListener('pointerleave', (e) => e.pointerType !== 'touch' && stop());
+  // the click that ends a hold isn't a tap
+  btn.addEventListener(
+    'click',
+    (e) => {
+      if (!held) return;
+      held = false;
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    },
+    true,
+  );
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
 }
