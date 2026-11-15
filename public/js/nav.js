@@ -1,10 +1,16 @@
 // Layer stack bound to browser history, so Android's back button / gesture
 // closes the top sheet, player or view instead of leaving the app.
 const stack = [];
+let skipPops = 0;
 
 export function initNav() {
   history.replaceState({ em: 0 }, '');
   addEventListener('popstate', (e) => {
+    // a back we asked for ourselves after already closing the layer
+    if (skipPops > 0) {
+      skipPops -= 1;
+      return;
+    }
     const depth = e.state?.em ?? 0;
     while (stack.length > depth) {
       const layer = stack.pop();
@@ -25,8 +31,14 @@ export function pushLayer(close, name = '') {
   const closer = () => {
     const i = stack.indexOf(layer);
     if (i === -1) return;
-    if (i === stack.length - 1) history.back();
-    else {
+    if (i === stack.length - 1) {
+      // close right away (waiting for the browser's back can take a beat on iPhone),
+      // then tidy the history entry behind it
+      stack.pop();
+      layer.close();
+      skipPops += 1;
+      history.back();
+    } else {
       stack.splice(i, 1);
       layer.close();
     }

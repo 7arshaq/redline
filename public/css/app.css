@@ -273,15 +273,17 @@ svg.ic { width: 22px; height: 22px; flex: none; display: block; }
 .tt-head { display: flex; align-items: center; justify-content: space-between; height: 46px; margin: 0 -15px; }
 .tt-head-r { display: flex; }
 .tt-stage { position: relative; min-height: 0; display: grid; place-items: center; container-type: size; }
-.tt-svg { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); display: block; touch-action: none; overflow: visible; }
-.tt-ticks { stroke: var(--ghost); }
-.tt-ticks-on { stroke: var(--red); }
-.tt-platter { transform-origin: 200px 200px; }
+.tt-disc { position: relative; width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); will-change: transform; }
+.tt-disc > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.tt-svg { touch-action: none; }
+.tt-ticks line { stroke: var(--ghost); stroke-width: 1.5; }
+.tt-ticks line.on { stroke: var(--red); }
+.tt-platter { pointer-events: none; transform-origin: 50% 50%; will-change: transform; }
 .tt-arm-grip { cursor: grab; pointer-events: stroke; }
 .tt-arm.held { transition: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.7)); }
 .tt-arm.held .tt-arm-grip { cursor: grabbing; }
-.tt-svg.arm-over .tt-platter > circle:first-child { filter: brightness(1.5); }
-.tt-arm { transform-origin: 318px 96px; transform: rotate(-4deg); transition: transform 1100ms var(--ease-in-out); }
+.tt-disc.arm-over .tt-platter { filter: brightness(1.35); }
+.tt-arm { pointer-events: none; transform-origin: 79.5% 24%; transform: rotate(-4deg); transition: transform 1100ms var(--ease-in-out); will-change: transform; }
 .tt-knob { transform-origin: 200px 200px; }
 .tt-svg.seeking .tt-knob circle { r: 7; }
 .tt-knob circle { transition: r 200ms var(--ease-out); }

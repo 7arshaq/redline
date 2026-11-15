@@ -31,25 +31,33 @@ let panel = null;
 let scrubDir = 0;
 let armHeld = false;
 let armPreview = null;
+let litTicks = 0;
 
 const grooves = [110, 102, 95, 88, 80, 72, 64, 56].map((r, i) => `<circle cx="200" cy="200" r="${r}" fill="none" stroke="rgba(242,239,233,${i % 2 ? 0.045 : 0.07})"/>`).join('');
 
+const TICKS = 120;
+const tickLines = Array.from({ length: TICKS }, (_, i) => {
+  const t = (i / TICKS) * Math.PI * 2;
+  const x = Math.sin(t);
+  const y = Math.cos(t);
+  return `<line x1="${(200 + 170 * x).toFixed(2)}" y1="${(200 - 170 * y).toFixed(2)}" x2="${(200 + 186 * x).toFixed(2)}" y2="${(200 - 186 * y).toFixed(2)}"/>`;
+}).join('');
+
 const discSVG = () => `
-  <svg class="tt-svg" id="ttSvg" viewBox="0 0 400 400" role="slider" tabindex="0" aria-label="Position in audio" aria-valuemin="0" aria-valuemax="100">
-    <defs>
-      <mask id="ttMask" maskUnits="userSpaceOnUse" x="0" y="0" width="400" height="400">
-        <path id="ttArc" d="M200 22 A178 178 0 0 1 200 378 A178 178 0 0 1 200 22" fill="none" stroke="#fff" stroke-width="30" pathLength="360" stroke-dasharray="0 360"/>
-      </mask>
-      <radialGradient id="ttVinyl" cx="50%" cy="50%" r="50%"><stop offset="0.3" stop-color="#151515"/><stop offset="1" stop-color="#0b0b0b"/></radialGradient>
-      <linearGradient id="ttSheen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.5" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-    </defs>
-    <g class="tt-ring">
-      <circle class="tt-ticks" cx="200" cy="200" r="178" fill="none" stroke-width="16" pathLength="360" stroke-dasharray="0.45 2.55"/>
-      <circle class="tt-ticks-on" cx="200" cy="200" r="178" fill="none" stroke-width="16" pathLength="360" stroke-dasharray="0.45 2.55" mask="url(#ttMask)"/>
-      <g id="ttMarks"></g>
-      <g class="tt-knob" id="ttKnob"><circle cx="200" cy="22" r="4.5" fill="#f2efe9"/></g>
-    </g>
-    <g class="tt-platter" id="ttPlatter">
+  <div class="tt-disc" id="ttDisc">
+    <svg class="tt-svg" id="ttSvg" viewBox="0 0 400 400" role="slider" tabindex="0" aria-label="Position in audio" aria-valuemin="0" aria-valuemax="100">
+      <g class="tt-ring">
+        <g class="tt-ticks" id="ttTicks">${tickLines}</g>
+        <g id="ttMarks"></g>
+        <g class="tt-knob" id="ttKnob"><circle cx="200" cy="22" r="4.5" fill="#f2efe9"/></g>
+      </g>
+      <circle cx="318" cy="96" r="14" fill="#121212" stroke="rgba(242,239,233,.16)"/>
+    </svg>
+    <svg class="tt-platter" id="ttPlatter" viewBox="0 0 400 400" aria-hidden="true">
+      <defs>
+        <radialGradient id="ttVinyl" cx="50%" cy="50%" r="50%"><stop offset="0.3" stop-color="#151515"/><stop offset="1" stop-color="#0b0b0b"/></radialGradient>
+        <linearGradient id="ttSheen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.5" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      </defs>
       <circle cx="200" cy="200" r="118" fill="url(#ttVinyl)"/>
       <circle cx="200" cy="200" r="117.5" fill="none" stroke="rgba(242,239,233,.12)"/>
       ${grooves}
@@ -58,18 +66,15 @@ const discSVG = () => `
       <circle cx="200" cy="200" r="40" style="fill:var(--red)"/>
       <circle cx="200" cy="200" r="31" fill="none" stroke="rgba(0,0,0,.18)" stroke-width="0.8"/>
       <rect x="199.2" y="167" width="1.6" height="9" rx="0.8" fill="#fff" opacity=".85"/>
-    </g>
-    <circle cx="200" cy="200" r="4" fill="#080808" stroke="rgba(242,239,233,.5)" stroke-width="1"/>
-    <g class="tt-arm-wrap">
-      <circle cx="318" cy="96" r="14" fill="#121212" stroke="rgba(242,239,233,.16)"/>
-      <g class="tt-arm" id="ttArm">
-        <line x1="318" y1="74" x2="318" y2="96" stroke="rgba(242,239,233,.4)" stroke-width="6" stroke-linecap="round"/>
-        <line x1="318" y1="96" x2="318" y2="230" stroke="#f2efe9" stroke-width="2" stroke-linecap="round"/>
-        <rect x="312" y="226" width="12" height="20" rx="3" fill="#f2efe9"/>
-        <circle cx="318" cy="96" r="4" fill="#f2efe9"/>
-      </g>
-    </g>
-  </svg>`;
+      <circle cx="200" cy="200" r="4" fill="#080808" stroke="rgba(242,239,233,.5)" stroke-width="1"/>
+    </svg>
+    <svg class="tt-arm" id="ttArm" viewBox="0 0 400 400" aria-hidden="true">
+      <line x1="318" y1="74" x2="318" y2="96" stroke="rgba(242,239,233,.4)" stroke-width="6" stroke-linecap="round"/>
+      <line x1="318" y1="96" x2="318" y2="230" stroke="#f2efe9" stroke-width="2" stroke-linecap="round"/>
+      <rect x="312" y="226" width="12" height="20" rx="3" fill="#f2efe9"/>
+      <circle cx="318" cy="96" r="4" fill="#f2efe9"/>
+    </svg>
+  </div>`;
 
 export function mountPlayer() {
   sheet = $('#player');
@@ -109,11 +114,10 @@ export function mountPlayer() {
   </div>`;
 
   R = {
+    disc: $('#ttDisc'),
     svg: $('#ttSvg'),
-    ring: $('.tt-ring', sheet),
+    ticks: [...sheet.querySelectorAll('#ttTicks line')],
     arm: $('#ttArm'),
-    armWrap: $('.tt-arm-wrap', sheet),
-    arc: $('#ttArc'),
     knob: $('#ttKnob'),
     marks: $('#ttMarks'),
     platter: $('#ttPlatter'),
@@ -238,7 +242,9 @@ function restingRect(el) {
 
 /** Transform that puts the big platter exactly over `rect`. */
 function platterOver(rect) {
-  const s = R.svg.getBoundingClientRect();
+  const st = R.disc.parentElement.getBoundingClientRect();
+  const side = Math.min(st.width, st.height);
+  const s = { left: st.left + (st.width - side) / 2, top: st.top + (st.height - side) / 2, width: side, height: side };
   const size = s.width * PLATTER * 2;
   const k = rect.width / size;
   const dx = rect.left + rect.width / 2 - (s.left + s.width / 2);
@@ -279,16 +285,31 @@ export function openPlayer(fromEl) {
   renderState();
   if (!motionOK()) return;
   if (fromRect) hideSource(from);
-  sheet.querySelectorAll('[data-in]').forEach((el, i) => {
-    const an = el.animate([{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 560, delay: 160 + i * 40, easing: EASE.out, fill: 'backwards' });
+  const anims = [];
+  const add = (el, k, o) => {
+    const an = el.animate(k, o);
     an.id = 'fly';
-  });
+    an.pause();
+    anims.push(an);
+  };
+  sheet.querySelectorAll('[data-in]').forEach((el, i) => add(el, [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 560, delay: 120 + i * 40, easing: EASE.out, fill: 'backwards' }));
   if (fromRect) {
-    R.svg.animate([{ transform: platterOver(fromRect) }, { transform: 'none' }], { duration: 640, easing: 'cubic-bezier(0.2, 0.85, 0.1, 1)' }).id = 'fly';
-    for (const el of [R.ring, R.armWrap]) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 460, delay: 300, easing: 'ease-out', fill: 'backwards' }).id = 'fly';
+    add(R.disc, [{ transform: platterOver(fromRect) }, { transform: 'none' }], { duration: 640, easing: 'cubic-bezier(0.2, 0.85, 0.1, 1)', fill: 'backwards' });
+    for (const el of [R.svg, R.arm]) add(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 440, delay: 280, easing: 'ease-out', fill: 'backwards' });
   } else {
-    R.svg.animate([{ opacity: 0, transform: 'scale(0.92)' }, { opacity: 1, transform: 'none' }], { duration: 520, easing: EASE.out }).id = 'fly';
+    add(R.disc, [{ opacity: 0, transform: 'scale(0.92)' }, { opacity: 1, transform: 'none' }], { duration: 520, easing: EASE.out, fill: 'backwards' });
   }
+  // The first frame of the player is the expensive one. Hold everything on its starting pose
+  // through it, then run: no skipped first half.
+  const mine = flight;
+  let started = false;
+  const go = () => {
+    if (started || mine !== flight) return;
+    started = true;
+    anims.forEach((an) => an.play());
+  };
+  requestAnimationFrame(() => requestAnimationFrame(go));
+  setTimeout(go, 80); // never wait on a paused frame clock
 }
 
 function closePlayer() {
@@ -317,14 +338,30 @@ function closePlayer() {
     });
   };
   if (!motionOK()) return done();
-  sheet.querySelectorAll('[data-in]').forEach((el) => (el.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(8px)' }], { duration: 150, easing: 'ease-out', fill: 'forwards' }).id = 'fly'));
-  for (const el of [R.ring, R.armWrap]) el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'forwards' }).id = 'fly';
-  const from = getComputedStyle(R.svg).transform;
+  const from = getComputedStyle(R.disc).transform;
+  stopFlight();
+  const anims = [];
+  const add = (el, k, o) => {
+    const an = el.animate(k, o);
+    an.id = 'fly';
+    an.pause();
+    anims.push(an);
+    return an;
+  };
+  sheet.querySelectorAll('[data-in]').forEach((el) => add(el, [{ opacity: 1 }, { opacity: 0, transform: 'translateY(8px)' }], { duration: 160, easing: 'ease-out', fill: 'forwards' }));
+  for (const el of [R.svg, R.arm]) add(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: 'forwards' });
   const fly = toRect
-    ? R.svg.animate([{ transform: from === 'none' ? 'none' : from }, { transform: platterOver(toRect) }], { duration: 420, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' })
-    : R.svg.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(0.92)' }], { duration: 220, fill: 'forwards' });
-  fly.id = 'fly';
+    ? add(R.disc, [{ transform: from === 'none' ? 'none' : from }, { transform: platterOver(toRect) }], { duration: 440, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' })
+    : add(R.disc, [{ opacity: 1 }, { opacity: 0, transform: 'scale(0.92)' }], { duration: 220, fill: 'forwards' });
   fly.finished.then(done, done);
+  let started = false;
+  const go = () => {
+    if (started || mine !== flight) return;
+    started = true;
+    anims.forEach((an) => an.play());
+  };
+  requestAnimationFrame(() => requestAnimationFrame(go));
+  setTimeout(go, 80); // never wait on a paused frame clock
 }
 
 /* ───────────── the record ───────────── */
@@ -426,7 +463,7 @@ function wireArm() {
     const on = onRecord(deg);
     if (on !== g.lastOn) {
       g.lastOn = on;
-      R.svg.classList.toggle('arm-over', on);
+      R.disc.classList.toggle('arm-over', on);
       if (g.lastOn !== null) sfx('tick');
     }
     armPreview = on ? progressAt(deg) : null;
@@ -439,7 +476,7 @@ function wireArm() {
     armHeld = false;
     armPreview = null;
     arm.classList.remove('held');
-    R.svg.classList.remove('arm-over');
+    R.disc.classList.remove('arm-over');
     if (!was.moved) {
       if (e.type === 'pointerup') {
         player.toggle();
@@ -585,7 +622,13 @@ function renderTime() {
   const t = seeking ? seeking.p * d : armPreview != null ? armPreview * d : player.time();
   const p = d ? clamp(t / d, 0, 1) : 0;
   const deg = (p * 360).toFixed(2);
-  R.arc.setAttribute('stroke-dasharray', `${deg} 360`);
+  const lit = Math.round(p * TICKS);
+  if (lit !== litTicks) {
+    const lo = Math.min(lit, litTicks);
+    const hi = Math.max(lit, litTicks);
+    for (let i = lo; i < hi; i++) R.ticks[i]?.classList.toggle('on', i < lit);
+    litTicks = lit;
+  }
   R.knob.style.transform = `rotate(${deg}deg)`;
   R.svg.setAttribute('aria-valuenow', String(Math.round(p * 100)));
   const down = player.isPlaying() || seeking || scrubDir;
