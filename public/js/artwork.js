@@ -64,15 +64,15 @@ export function artworkFor(t) {
   g.arc(48, 60, 8, 0, Math.PI * 2);
   g.fill();
   g.fillStyle = '#fff';
-  g.font = '600 20px Unbounded, -apple-system, "Helvetica Neue", sans-serif';
+  g.font = '700 18px Syncopate, -apple-system, "Helvetica Neue", sans-serif';
   g.fillText('REDLINE', 68, 68);
 
-  g.font = '600 40px Unbounded, -apple-system, "Helvetica Neue", sans-serif';
+  g.font = '700 32px Syncopate, -apple-system, "Helvetica Neue", sans-serif';
   const lines = wrap(g, t.title || 'Audio', S - 88, 3);
-  let y = 468 - (lines.length - 1) * 54;
+  let y = 468 - (lines.length - 1) * 44;
   for (const l of lines) {
     g.fillText(l, 44, y);
-    y += 54;
+    y += 44;
   }
   const url = c.toDataURL('image/png');
   cache.set(key, url);
